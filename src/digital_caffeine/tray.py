@@ -40,12 +40,21 @@ def _format_uptime(td: timedelta) -> str:
 class TrayApp:
     """Manages the system tray icon, menu, and engine lifecycle."""
 
-    def __init__(self, mode: Mode, interval: int, duration: int | None) -> None:
+    def __init__(
+        self,
+        mode: Mode,
+        interval: int,
+        duration: int | None,
+        simulate: bool = False,
+    ) -> None:
         self._mode = mode
         self._interval = interval
         self._duration = duration
+        self._simulate = simulate
 
-        self._engine = CaffeineEngine(mode=mode, interval=interval, duration=duration)
+        self._engine = CaffeineEngine(
+            mode=mode, interval=interval, duration=duration, simulate=simulate,
+        )
         self._engine.on_stop = self._on_engine_stop
 
         self._session_ended = False
@@ -103,6 +112,10 @@ class TrayApp:
                 self._on_toggle_pause,
                 enabled=lambda _: self._engine.is_active,
             ),
+            Item(
+                lambda _: "Simulate: On" if self._simulate else "Simulate: Off",
+                self._on_toggle_simulate,
+            ),
             pystray.Menu.SEPARATOR,
             Item("Quit", self._on_quit),
         )
@@ -140,6 +153,7 @@ class TrayApp:
                 mode=new_mode,
                 interval=self._interval,
                 duration=self._duration,
+                simulate=self._simulate,
             )
             self._engine.on_stop = original_callback
             self._engine.start()
@@ -155,6 +169,30 @@ class TrayApp:
         return _action
 
     # -- Callbacks -----------------------------------------------------------
+
+    def _on_toggle_simulate(
+        self, icon: pystray.Icon, item: pystray.MenuItem
+    ) -> None:
+        """Toggle input simulation on or off."""
+        self._simulate = not self._simulate
+        # Restart engine with new simulate setting
+        original_callback = self._engine.on_stop
+        self._engine.on_stop = None
+        was_paused = self._engine.is_paused
+        self._engine.stop()
+
+        self._engine = CaffeineEngine(
+            mode=self._mode,
+            interval=self._interval,
+            duration=self._duration,
+            simulate=self._simulate,
+        )
+        self._engine.on_stop = original_callback
+        self._engine.start()
+        if was_paused:
+            self._engine.pause()
+        self._update_icon_for_state()
+        self._refresh_menu()
 
     def _on_toggle_pause(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
         """Toggle between paused and active states."""
@@ -245,7 +283,7 @@ class TrayApp:
         self._icon.run()
 
 
-def run_tray(mode: Mode, interval: int, duration: int | None) -> None:
+def run_tray(mode: Mode, interval: int, duration: int | None, simulate: bool = False) -> None:
     """Main entry point for launching Digital Caffeine in system tray mode.
 
     Called from the CLI when the user passes the --tray flag. Blocks until the
@@ -255,6 +293,7 @@ def run_tray(mode: Mode, interval: int, duration: int | None) -> None:
         mode: Which sleep prevention mode to use.
         interval: How often (in seconds) to reassert the execution state flags.
         duration: Optional auto-stop after this many seconds. None means run indefinitely.
+        simulate: Whether to simulate mouse input to keep apps active.
     """
-    app = TrayApp(mode=mode, interval=interval, duration=duration)
+    app = TrayApp(mode=mode, interval=interval, duration=duration, simulate=simulate)
     app.run()

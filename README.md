@@ -47,6 +47,9 @@ caffeine start --tray
 
 # Custom refresh interval
 caffeine start --interval 30
+
+# Simulate input to keep Teams/Slack active
+caffeine start --simulate
 ```
 
 ## CLI Usage
@@ -61,6 +64,7 @@ Start keeping your machine awake.
 | `--interval` | `-i` | Refresh interval in seconds | `60` |
 | `--duration` | `-d` | Auto-stop timer (`30m`, `2h`, `1h30m`) | indefinite |
 | `--tray` | `-t` | Launch in system tray mode | off |
+| `--simulate` | `-s` | Simulate mouse input for Teams/Slack | off |
 
 ### `caffeine config`
 
@@ -97,6 +101,9 @@ interval = 60
 
 # Auto-stop duration (e.g. "2h", "30m")
 # duration = "2h"
+
+# Simulate mouse input to keep Teams/Slack active
+simulate = false
 ```
 
 Generate a default config:

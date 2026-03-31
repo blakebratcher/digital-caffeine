@@ -36,6 +36,7 @@ DEFAULT_CONFIG: dict[str, object] = {
     "mode": "all",
     "interval": 60,
     "duration": None,
+    "simulate": False,
 }
 
 # --------------------------------------------------------------------------- #
@@ -160,6 +161,9 @@ interval = 60
 # Auto-stop after duration (e.g. "2h", "30m", "1h30m")
 # Leave empty or remove for indefinite
 # duration = "2h"
+
+# Simulate mouse input to keep apps like Teams/Slack active
+simulate = false
 """
 
 

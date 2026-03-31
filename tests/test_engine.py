@@ -302,3 +302,47 @@ class TestExecutionStateCalls:
         expected_flags = MODE_FLAGS[mode]
         mock_ste.assert_called_with(expected_flags)
         eng.stop()
+
+
+# ---------------------------------------------------------------------------
+# Tests - Simulate Property
+# ---------------------------------------------------------------------------
+
+
+class TestSimulate:
+    """Tests for the simulate input feature."""
+
+    def test_simulate_defaults_false(self) -> None:
+        """simulate defaults to False."""
+        eng = CaffeineEngine()
+        assert eng.simulate is False
+        eng.stop()
+
+    def test_simulate_property(self) -> None:
+        """simulate property returns the value passed to the constructor."""
+        eng = CaffeineEngine(simulate=True)
+        assert eng.simulate is True
+        eng.stop()
+
+    @patch(
+        "digital_caffeine.engine.CaffeineEngine._simulate_input"
+    )
+    def test_simulate_calls_simulate_input(self, mock_sim: MagicMock) -> None:
+        """When simulate is True, _simulate_input should be called on start."""
+        eng = CaffeineEngine(simulate=True)
+        eng.start()
+
+        mock_sim.assert_called()
+        eng.stop()
+
+    @patch(
+        "digital_caffeine.engine.CaffeineEngine._simulate_input"
+    )
+    def test_no_simulate_does_not_call(self, mock_sim: MagicMock) -> None:
+        """When simulate is False, _simulate_input should not be called."""
+        eng = CaffeineEngine(simulate=False)
+        eng.start()
+        time.sleep(0.05)
+
+        mock_sim.assert_not_called()
+        eng.stop()

@@ -32,6 +32,7 @@ class CaffeineEngine:
         mode: Mode = Mode.DISPLAY_AND_SYSTEM,
         interval: int = 60,
         duration: int | None = None,
+        simulate: bool = False,
     ) -> None:
         """Initialize the engine.
 
@@ -39,10 +40,13 @@ class CaffeineEngine:
             mode: Which sleep prevention mode to use.
             interval: How often (in seconds) to reassert the execution state flags.
             duration: Optional auto-stop after this many seconds. None means indefinite.
+            simulate: If True, simulate a tiny mouse movement each cycle to
+                register as real user input for apps like Teams and Slack.
         """
         self._mode = mode
         self._interval = interval
         self._duration = duration
+        self._simulate = simulate
 
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
@@ -75,6 +79,11 @@ class CaffeineEngine:
     def mode(self) -> Mode:
         """Return the current sleep prevention mode."""
         return self._mode
+
+    @property
+    def simulate(self) -> bool:
+        """Return True if input simulation is enabled."""
+        return self._simulate
 
     @property
     def uptime(self) -> timedelta:
@@ -119,6 +128,8 @@ class CaffeineEngine:
             self._pause_event.set()
 
             self._set_execution_state()
+            if self._simulate:
+                self._simulate_input()
 
             self._thread = threading.Thread(
                 target=self._worker,
@@ -127,9 +138,10 @@ class CaffeineEngine:
             )
             self._thread.start()
             logger.info(
-                "CaffeineEngine started (mode=%s, interval=%ds)",
+                "CaffeineEngine started (mode=%s, interval=%ds, simulate=%s)",
                 self._mode.value,
                 self._interval,
+                self._simulate,
             )
 
     def stop(self) -> None:
@@ -246,6 +258,55 @@ class CaffeineEngine:
 
             # Reassert the flags
             self._set_execution_state()
+            if self._simulate:
+                self._simulate_input()
+
+    @staticmethod
+    def _simulate_input() -> None:
+        """Send a tiny mouse movement to simulate user activity.
+
+        Moves the cursor 1 pixel right then 1 pixel left. This registers
+        as real user input to applications like Teams, Slack, and Zoom
+        without visibly affecting the cursor position.
+        """
+        import ctypes.wintypes
+
+        input_mouse = 0
+        mouseeventf_move = 0x0001
+
+        class _MouseInput(ctypes.Structure):
+            _fields_ = [
+                ("dx", ctypes.c_long),
+                ("dy", ctypes.c_long),
+                ("mouseData", ctypes.wintypes.DWORD),
+                ("dwFlags", ctypes.wintypes.DWORD),
+                ("time", ctypes.wintypes.DWORD),
+                ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
+            ]
+
+        class _Input(ctypes.Structure):
+            _fields_ = [
+                ("type", ctypes.wintypes.DWORD),
+                ("mi", _MouseInput),
+            ]
+
+        def send_mouse_move(dx: int, dy: int) -> None:
+            mi = _MouseInput(
+                dx=dx,
+                dy=dy,
+                mouseData=0,
+                dwFlags=mouseeventf_move,
+                time=0,
+                dwExtraInfo=ctypes.pointer(ctypes.c_ulong(0)),
+            )
+            inp = _Input(type=input_mouse, mi=mi)
+            ctypes.windll.user32.SendInput(  # type: ignore[attr-defined]
+                1, ctypes.byref(inp), ctypes.sizeof(inp)
+            )
+
+        send_mouse_move(1, 0)
+        send_mouse_move(-1, 0)
+        logger.debug("Simulated mouse input (1px right, 1px left)")
 
     def _set_execution_state(self) -> None:
         """Set the Windows execution state flags for the current mode."""

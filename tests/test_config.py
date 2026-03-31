@@ -38,7 +38,8 @@ def test_default_config_values():
     assert DEFAULT_CONFIG["mode"] == "all"
     assert DEFAULT_CONFIG["interval"] == 60
     assert DEFAULT_CONFIG["duration"] is None
-    assert set(DEFAULT_CONFIG.keys()) == {"mode", "interval", "duration"}
+    assert DEFAULT_CONFIG["simulate"] is False
+    assert set(DEFAULT_CONFIG.keys()) == {"mode", "interval", "duration", "simulate"}
 
 
 # --------------------------------------------------------------------------- #

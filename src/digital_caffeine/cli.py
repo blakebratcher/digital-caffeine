@@ -87,6 +87,7 @@ def build_display(
     duration_seconds: int | None,
     interval: int,
     paused: bool,
+    simulate: bool,
 ) -> Panel:
     """Build a Rich Panel showing the current keep-awake status.
 
@@ -115,6 +116,7 @@ def build_display(
         f"  Uptime:          {format_time(uptime_seconds)}",
         f"  Time remaining:  {remaining_str}",
         f"  Interval:        {interval}s",
+        f"  Simulate:        {'[green]On[/green]' if simulate else '[dim]Off[/dim]'}",
         "",
         "  [dim]Press Ctrl+C to stop[/dim]",
     ]
@@ -168,11 +170,19 @@ def cli() -> None:
     default=False,
     help="Launch in system tray mode instead of the terminal UI.",
 )
+@click.option(
+    "--simulate",
+    "-s",
+    is_flag=True,
+    default=None,
+    help="Simulate mouse input to keep apps like Teams active. Off by default.",
+)
 def start(
     mode_name: str | None,
     interval: int | None,
     duration_str: str | None,
     tray: bool,
+    simulate: bool | None,
 ) -> None:
     """Start keeping your machine awake.
 
@@ -195,6 +205,9 @@ def start(
     elif config.get("duration") is not None:
         duration_seconds = parse_duration(config["duration"])
 
+    if simulate is None:
+        simulate = config.get("simulate", False)
+
     # System tray mode
     if tray:
         console.print("[cyan]Launching system tray mode...[/cyan]")
@@ -206,13 +219,13 @@ def start(
                 "Install the tray extras to use this feature."
             )
             sys.exit(1)
-        run_tray(mode=mode, interval=interval, duration=duration_seconds)
+        run_tray(mode=mode, interval=interval, duration=duration_seconds, simulate=simulate)
         return
 
     # CLI live display mode
     from digital_caffeine.engine import CaffeineEngine
 
-    engine = CaffeineEngine(mode=mode, interval=interval)
+    engine = CaffeineEngine(mode=mode, interval=interval, simulate=simulate)
     engine.start()
 
     start_time = time.monotonic()
@@ -228,6 +241,7 @@ def start(
                 duration_seconds=duration_seconds,
                 interval=interval,
                 paused=False,
+                simulate=simulate,
             ),
             console=console,
             refresh_per_second=1,
@@ -247,6 +261,7 @@ def start(
                         duration_seconds=duration_seconds,
                         interval=interval,
                         paused=False,
+                        simulate=simulate,
                     )
                 )
                 time.sleep(1)
@@ -259,6 +274,8 @@ def start(
         console.print("[bold cyan]Session Summary[/bold cyan]")
         console.print(f"  Total uptime:  {format_time(total_uptime)}")
         console.print(f"  Mode:          {MODE_DISPLAY[mode]}")
+        if simulate:
+            console.print("  Simulate:      On")
         console.print("[green]Digital Caffeine stopped. Sweet dreams![/green]")
 
 
