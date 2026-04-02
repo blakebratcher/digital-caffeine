@@ -25,13 +25,13 @@ Digital Caffeine tells your PC to knock it off. It uses the Windows `SetThreadEx
 
 ## What you get
 
-The CLI mode gives you a live dashboard with an animated coffee cup, steam that actually moves, a border that pulses through different colors, and a rotation of coffee puns at the bottom. Is this necessary? No. Did we do it anyway? Obviously.
+The CLI mode gives you a live dashboard running at 8fps with procedurally generated steam wisps rising from a color-gradient coffee cup, a rippling liquid surface, a border that breathes through cyan shades, and coffee puns that type themselves out with a blinking cursor. Timed sessions get a progress bar. Is any of this necessary? No. Did we do it anyway? Obviously.
 
 There's also a system tray mode if you'd rather it just sit in the corner and do its job quietly. Coffee cup icon, right-click menu, notifications when a timed session ends.
 
-Other stuff it does:
+Other stuff:
 - Three keep-awake modes (display only, system only, or both at once)
-- Timed sessions, so you can say "2 hours" and it actually stops
+- Timed sessions with a live progress bar that fills up as you go
 - A `--simulate` flag that wiggles the mouse 1px each cycle so Teams thinks you're still there
 - TOML config file for saving your preferred defaults
 
@@ -76,26 +76,29 @@ caffeine start --simulate --duration 8h --mode all
 When you run `caffeine start`, you get this:
 
 ```
-  +-------------------------------------------------------------+
-  |                    Digital Caffeine                          |
-  |                                                             |
-  |          )  )           Status:         Active              |
-  |         (  (            Mode:           Display + System    |
-  |          )  )           Uptime:         00:05:23            |
-  |       +-----------+     Time remaining: 01:54:37            |
-  |       | ......... |~\   Interval:       60s                 |
-  |       | ......... | |   Simulate:       On                  |
-  |       | ......... |~/                                       |
-  |       +-----------+                                         |
-  |      =================                                     |
-  |                                                             |
-  |    Espresso yourself freely                                 |
-  |                                                             |
-  |    Press Ctrl+C to stop                                     |
-  +-------------------------------------------------------------+
+  +-----------------------------------------------+
+  |            Digital Caffeine                    |
+  |                                                |
+  |     .  .                                       |
+  |     . .  ·                                     |
+  |    '    '·          Status:         Active     |
+  |    '   ~'           Mode:           Display    |
+  |      ) ~  )         Uptime:         00:05:23   |
+  |   +-----------+     Time remaining: 01:54:37   |
+  |   | ~.~.~.~.~ |--\  Interval:       60s        |
+  |   | ......... |  |  Simulate:       On         |
+  |   | ......... |  |                             |
+  |   | ......... |--/  ####............... 25%    |
+  |   +-----------+                                |
+  |  =================                            |
+  |                                                |
+  |  Brewing producti_                             |
+  |                                                |
+  |  Press Ctrl+C to stop                          |
+  +-----------------------------------------------+
 ```
 
-The steam cycles through frames, the border shifts color, and the puns rotate every 8 seconds. Nobody asked for this.
+The steam is procedurally generated - 10 wisps rising with sine-wave drift, fading from `)` near the cup to `·` at the top. The coffee has a three-tone brown gradient. The liquid surface ripples. The quips type themselves out letter by letter with a blinking cursor. If you set a duration, a progress bar fills up next to the cup. The border breathes through cyan shades at 2Hz. All of it runs at 8fps and the entire animation state is a pure function of the frame counter. Nobody asked for this.
 
 ### Options
 
