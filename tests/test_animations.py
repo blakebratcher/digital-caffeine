@@ -98,16 +98,27 @@ def test_quips_has_at_least_ten() -> None:
 
 def test_get_quip_rotates() -> None:
     frames_per_quip = 8 * FPS
-    quip_0 = get_quip(frame=0, paused=False)
-    quip_same = get_quip(frame=frames_per_quip - 1, paused=False)
-    quip_next = get_quip(frame=frames_per_quip, paused=False)
-    assert quip_0 == quip_same
-    assert quip_0 != quip_next
+    # Compare fully-typed quips at end of consecutive windows
+    quip_a = get_quip(frame=frames_per_quip - 1, paused=False)
+    quip_b = get_quip(frame=2 * frames_per_quip - 1, paused=False)
+    assert quip_a != quip_b
+
+
+def test_get_quip_typewriter_effect() -> None:
+    # Frame 0 should show partial text with cursor
+    partial = get_quip(frame=0, paused=False)
+    full = get_quip(frame=8 * FPS - 1, paused=False)
+    assert len(partial) < len(full)
+    assert full.startswith(partial[:2])
 
 
 def test_get_quip_wraps_around() -> None:
     cycle_length = len(QUIPS) * 8 * FPS
-    assert get_quip(frame=0, paused=False) == get_quip(frame=cycle_length, paused=False)
+    # Compare at same typing stage (fully typed)
+    end = 8 * FPS - 1
+    assert get_quip(frame=end, paused=False) == get_quip(
+        frame=cycle_length + end, paused=False
+    )
 
 
 def test_get_quip_paused_returns_paused_quip() -> None:
