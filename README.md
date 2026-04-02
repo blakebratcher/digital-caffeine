@@ -1,28 +1,47 @@
-# Digital Caffeine ☕
+# Digital Caffeine
 
-> Keep your Windows machine awake - no more unwanted sleep.
+```
+         )  )
+        (  (             Your PC called.
+         )  )            It said it's tired.
+      +-----------+      
+      | ......... |~\    We said no.
+      | ......... | |    
+      | ......... |~/    
+      +-----------+      
+     =================   
+```
+
+> Keep your Windows machine aggressively, unreasonably awake.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
-Digital Caffeine prevents your Windows PC from going to sleep or turning off the display. It uses the native Windows `SetThreadExecutionState` API - no simulated mouse movements or keyboard input. Clean, reliable, and lightweight.
+## So what is this
 
-## Features
+You know that thing where you step away from your desk for 45 seconds to refill your water and Windows decides that's a great time to lock the screen? And then you have to type your 47-character enterprise password again while your boss watches? Yeah.
 
-- **CLI mode** - Rich terminal interface with live status display
-- **System tray mode** - Runs silently in the background with a coffee cup icon
-- **Multiple modes** - Keep display on, prevent system sleep, or both
-- **Timed sessions** - "Keep awake for 2 hours" with auto-stop
-- **Configurable** - TOML config file for your preferred defaults
-- **Zero input simulation** - Uses proper Windows API, not fake mouse moves
+Digital Caffeine tells your PC to knock it off. It uses the Windows `SetThreadExecutionState` API to prevent sleep and screen dimming. No mouse jiggling, no fake keypresses, just the actual API that Windows provides for exactly this purpose. We don't know why more tools don't just do this.
 
-## Installation
+## What you get
+
+The CLI mode gives you a live dashboard with an animated coffee cup, steam that actually moves, a border that pulses through different colors, and a rotation of coffee puns at the bottom. Is this necessary? No. Did we do it anyway? Obviously.
+
+There's also a system tray mode if you'd rather it just sit in the corner and do its job quietly. Coffee cup icon, right-click menu, notifications when a timed session ends.
+
+Other stuff it does:
+- Three keep-awake modes (display only, system only, or both at once)
+- Timed sessions, so you can say "2 hours" and it actually stops
+- A `--simulate` flag that wiggles the mouse 1px each cycle so Teams thinks you're still there
+- TOML config file for saving your preferred defaults
+
+## Install
 
 ```bash
 pip install digital-caffeine
 ```
 
-Or install from source:
+Or clone it and install from source:
 
 ```bash
 git clone https://github.com/blakebratcher/digital-caffeine.git
@@ -30,67 +49,81 @@ cd digital-caffeine
 pip install -e .
 ```
 
-## Quick Start
+## Usage
 
 ```bash
-# Keep awake (display + system) - CLI mode
+# just keep everything awake
 caffeine start
 
-# Keep awake for 2 hours
+# keep awake for 2 hours then stop
 caffeine start --duration 2h
 
-# Display only (prevent screen off, allow system sleep)
+# only prevent the screen from turning off
 caffeine start --mode display
 
-# Launch as system tray app
+# look busy on Teams while you "think strategically"
+caffeine start --simulate
+
+# system tray mode
 caffeine start --tray
 
-# Custom refresh interval
-caffeine start --interval 30
-
-# Simulate input to keep Teams/Slack active
-caffeine start --simulate
+# go nuts
+caffeine start --simulate --duration 8h --mode all
 ```
 
-## CLI Usage
+## What the CLI looks like
 
-### `caffeine start`
+When you run `caffeine start`, you get this:
 
-Start keeping your machine awake.
+```
+  +-------------------------------------------------------------+
+  |                    Digital Caffeine                          |
+  |                                                             |
+  |          )  )           Status:         Active              |
+  |         (  (            Mode:           Display + System    |
+  |          )  )           Uptime:         00:05:23            |
+  |       +-----------+     Time remaining: 01:54:37            |
+  |       | ......... |~\   Interval:       60s                 |
+  |       | ......... | |   Simulate:       On                  |
+  |       | ......... |~/                                       |
+  |       +-----------+                                         |
+  |      =================                                     |
+  |                                                             |
+  |    Espresso yourself freely                                 |
+  |                                                             |
+  |    Press Ctrl+C to stop                                     |
+  +-------------------------------------------------------------+
+```
+
+The steam cycles through frames, the border shifts color, and the puns rotate every 8 seconds. Nobody asked for this.
+
+### Options
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--mode` | `-m` | `all`, `display`, or `system` | `all` |
-| `--interval` | `-i` | Refresh interval in seconds | `60` |
-| `--duration` | `-d` | Auto-stop timer (`30m`, `2h`, `1h30m`) | indefinite |
-| `--tray` | `-t` | Launch in system tray mode | off |
-| `--simulate` | `-s` | Simulate mouse input for Teams/Slack | off |
+| `--interval` | `-i` | How often to reassert flags, in seconds | `60` |
+| `--duration` | `-d` | Stop after this long (`30m`, `2h`, `1h30m`) | runs forever |
+| `--tray` | `-t` | Launch in system tray instead | off |
+| `--simulate` | `-s` | Wiggle mouse for Teams/Slack | off |
 
-### `caffeine config`
-
-Manage configuration.
+## System tray mode
 
 ```bash
-caffeine config --show    # Display current config
-caffeine config --init    # Create default config file
-caffeine config --path    # Show config file location
+caffeine start --tray
 ```
 
-### `caffeine version`
-
-Show version info.
-
-## System Tray Mode
-
-Launch with `caffeine start --tray` for a background experience:
-
-- Coffee cup icon in the system tray (filled = active, outline = paused)
-- Right-click menu to change modes, pause/resume, or quit
-- Notification when a timed session ends
+Puts a coffee cup in the system tray. Filled cup means it's working, outline means it's paused. Right-click to switch modes, pause, toggle simulate, or quit.
 
 ## Configuration
 
-Config file location: `~/.digital-caffeine/config.toml`
+```bash
+caffeine config --init    # Create a default config file
+caffeine config --show    # See what's in there
+caffeine config --path    # Print where the config file lives
+```
+
+Config file goes in `~/.digital-caffeine/config.toml`:
 
 ```toml
 # Keep-awake mode: "all", "display", or "system"
@@ -106,35 +139,37 @@ interval = 60
 simulate = false
 ```
 
-Generate a default config:
+## How it actually works
 
-```bash
-caffeine config --init
+```
+  Your PC:  "I'm sleepy..."
+  Caffeine: "SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED)"
+  Your PC:  "I've never been more awake in my life."
 ```
 
-## How It Works
+It calls the Windows [`SetThreadExecutionState`](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setthreadexecutionstate) API with these flags:
 
-Digital Caffeine calls the Windows [`SetThreadExecutionState`](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setthreadexecutionstate) API with the appropriate flags:
+| Flag | What it prevents |
+|------|-----------------|
+| `ES_DISPLAY_REQUIRED` | Screen turning off |
+| `ES_SYSTEM_REQUIRED` | System going to sleep |
+| `ES_CONTINUOUS` | Keeps the flags active until explicitly cleared |
 
-- `ES_DISPLAY_REQUIRED` - Prevents the display from turning off
-- `ES_SYSTEM_REQUIRED` - Prevents the system from entering sleep
-- `ES_CONTINUOUS` - Keeps the setting active until explicitly cleared
+Flags get reasserted every 60 seconds (configurable) as a safety net. When you stop the program, it clears everything and Windows goes back to normal power management.
 
-The flags are reasserted periodically (default every 60 seconds) as a safety measure. When you stop the program, it clears the flags so Windows resumes normal power management.
+The `--simulate` flag adds a 1px mouse move (right, then back left) each cycle. You can't see it, but Teams can. Go make that sandwich.
 
 ## Development
 
 ```bash
-# Install with dev dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Lint
-ruff check src/ tests/
+pip install -e ".[dev]"    # Dev dependencies
+pytest                     # Run tests
+pytest -x                  # Stop on first failure
+ruff check src/ tests/     # Lint
 ```
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT. See [LICENSE](LICENSE).
+
+Do whatever you want with it.
