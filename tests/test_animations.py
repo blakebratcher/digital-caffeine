@@ -30,7 +30,8 @@ def test_steam_frames_are_generated() -> None:
 
 def test_get_steam_frame_cycles() -> None:
     first = get_steam_frame(frame=0, paused=False)
-    wrapped = get_steam_frame(frame=len(STEAM_FRAMES), paused=False)
+    # Steam advances at half FPS, so full cycle is len * 2 frames
+    wrapped = get_steam_frame(frame=len(STEAM_FRAMES) * 2, paused=False)
     assert first == wrapped
 
 

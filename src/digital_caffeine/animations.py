@@ -12,7 +12,7 @@ from digital_caffeine.constants import Mode
 
 # -- Configuration -----------------------------------------------------------
 
-FPS = 4
+FPS = 8
 
 # -- Markup-aware layout helpers ---------------------------------------------
 
@@ -34,20 +34,24 @@ _STEAM_HEIGHT = 5
 
 
 def _generate_steam_frames() -> list[str]:
-    """Generate smooth steam animation frames with multiple rising wisps."""
+    """Generate smooth steam animation frames with rising wisps and trails."""
     cx = 12
     num_frames = 24
     age_chars = [")", "~", "'", "\u00b7", "."]
+    trail_chars = ["~", "'", "\u00b7", ".", " "]
     max_age = 7
 
     wisps = [
-        (0, cx - 2, 1.2, 0.5),
-        (1, cx + 1, 1.0, 0.4),
-        (2, cx, 0.8, 0.6),
-        (3, cx - 1, 1.5, 0.3),
-        (4, cx + 2, 1.1, 0.5),
-        (5, cx - 2, 0.9, 0.7),
-        (6, cx + 1, 1.3, 0.4),
+        (0, cx - 2, 1.2, 0.50),
+        (1, cx + 1, 1.0, 0.40),
+        (2, cx, 0.8, 0.60),
+        (3, cx - 1, 1.5, 0.30),
+        (4, cx + 2, 1.1, 0.50),
+        (5, cx - 3, 0.9, 0.70),
+        (6, cx + 1, 1.3, 0.40),
+        (0, cx + 3, 0.7, 0.35),
+        (3, cx - 3, 1.0, 0.55),
+        (5, cx + 2, 1.4, 0.45),
     ]
 
     frames = []
@@ -56,12 +60,23 @@ def _generate_steam_frames() -> list[str]:
         for birth, bx, amp, freq in wisps:
             age = (f - birth) % max_age
             row = _STEAM_HEIGHT - 1 - age
+            drift = math.sin(f * freq + birth * 0.9) * amp
+            x = int(round(bx + drift))
             if 0 <= row < _STEAM_HEIGHT:
-                drift = math.sin(f * freq + birth * 0.9) * amp
-                x = int(round(bx + drift))
                 char = age_chars[min(age, len(age_chars) - 1)]
                 if 0 <= x < _STEAM_WIDTH and grid[row][x] == " ":
                     grid[row][x] = char
+            # Trail: one row below the wisp, lighter character
+            tr = row + 1
+            if 0 <= tr < _STEAM_HEIGHT and age > 0:
+                tc = trail_chars[min(age - 1, len(trail_chars) - 1)]
+                tx = int(round(bx + drift * 0.6))
+                if (
+                    tc != " "
+                    and 0 <= tx < _STEAM_WIDTH
+                    and grid[tr][tx] == " "
+                ):
+                    grid[tr][tx] = tc
         frames.append("\n".join("".join(row) for row in grid))
     return frames
 
@@ -72,70 +87,65 @@ STEAM_FRAMES: list[str] = _generate_steam_frames()
 def get_steam_frame(frame: int, *, paused: bool) -> str:
     """Return the steam art for the current frame.
 
-    Args:
-        frame: Animation frame counter.
-        paused: Whether the engine is paused.
-
-    Returns:
-        A multi-line string of steam art with dim markup, or blank lines if paused.
+    Steam advances at half the display FPS for natural rising speed.
     """
     if paused:
         return "\n".join([" " * _STEAM_WIDTH] * _STEAM_HEIGHT)
-    raw = STEAM_FRAMES[frame % len(STEAM_FRAMES)]
+    sf = (frame // 2) % len(STEAM_FRAMES)
+    raw = STEAM_FRAMES[sf]
     return "\n".join(f"[dim]{line}[/]" for line in raw.split("\n"))
 
 
 # -- Cup art with animated liquid surface ------------------------------------
 
 _SURFACE_PATTERNS: list[str] = [
-    "[#D2691E]\u007e\u2248\u007e\u2248\u007e\u2248\u007e\u2248\u007e\u2248\u007e[/]",
-    "[#D2691E]\u2248\u007e\u2248\u007e\u2248\u007e\u2248\u007e\u2248\u007e\u2248[/]",
-    "[#D2691E]\u007e\u2248\u2248\u007e\u2248\u2248\u007e\u2248\u2248\u007e\u2248[/]",
-    "[#D2691E]\u2248\u007e\u007e\u2248\u007e\u007e\u2248\u007e\u007e\u2248\u007e[/]",
+    "[#D2691E]~\u2248~\u2248~\u2248~\u2248~\u2248~[/]",
+    "[#D2691E]~\u2248\u2248~\u2248~\u2248\u2248~\u2248~[/]",
+    "[#D2691E]\u2248~\u2248~\u2248~\u2248~\u2248~\u2248[/]",
+    "[#D2691E]\u2248~\u2248\u2248~\u2248\u2248~\u2248~\u2248[/]",
+    "[#D2691E]\u2248~~\u2248~~\u2248~~\u2248~[/]",
+    "[#D2691E]~\u2248\u2248~\u2248\u2248~\u2248\u2248~\u2248[/]",
+    "[#D2691E]~\u2248~\u2248\u2248~\u2248~\u2248~\u2248[/]",
+    "[#D2691E]\u2248~\u2248~\u2248\u2248~\u2248~\u2248~[/]",
 ]
+
+# Pre-built cup components
+_CUP_TOP = "     \u250c" + "\u2500" * 13 + "\u2510    "
+_CUP_BOT = "     \u2514" + "\u2500" * 13 + "\u2518    "
+_CUP_SAUCER = "    [dim]" + "\u2550" * 19 + "[/]  "
+_CUP_DIM = "[dim]" + "\u2591" * 11 + "[/]"
+_CUP_MED = "[#A0522D]" + "\u2592" * 11 + "[/]"
+_CUP_DARK = "[#6B4226]" + "\u2593" * 11 + "[/]"
 
 
 def get_cup_art(frame: int, *, paused: bool) -> str:
     """Return the coffee cup ASCII art for the current frame.
 
-    Active cups have colored coffee fill with an animated liquid surface.
-    Paused cups show dimmed fill.
-
-    Args:
-        frame: Animation frame counter (used for surface ripple).
-        paused: Whether the engine is paused.
-
-    Returns:
-        A multi-line string of cup art with Rich markup.
+    Active cups have a brown gradient (light surface to dark bottom)
+    with an animated liquid ripple. Paused cups show dimmed fill.
     """
-    _top = "     \u250c" + "\u2500" * 13 + "\u2510    "
-    _bot = "     \u2514" + "\u2500" * 13 + "\u2518    "
-    _saucer = "    [dim]" + "\u2550" * 19 + "[/]  "
-    _dim_fill = "[dim]" + "\u2591" * 11 + "[/]"
-    _hot_fill = "[#8B6914]" + "\u2593" * 11 + "[/]"
-
     if paused:
         lines = [
-            _top,
-            f"     \u2502 {_dim_fill} \u251c\u2500\u2500\u256e",
-            f"     \u2502 {_dim_fill} \u2502  \u2502",
-            f"     \u2502 {_dim_fill} \u2502  \u2502",
-            f"     \u2502 {_dim_fill} \u251c\u2500\u2500\u256f",
-            _bot,
-            _saucer,
+            _CUP_TOP,
+            f"     \u2502 {_CUP_DIM} \u251c\u2500\u2500\u256e",
+            f"     \u2502 {_CUP_DIM} \u2502  \u2502",
+            f"     \u2502 {_CUP_DIM} \u2502  \u2502",
+            f"     \u2502 {_CUP_DIM} \u251c\u2500\u2500\u256f",
+            _CUP_BOT,
+            _CUP_SAUCER,
         ]
     else:
         surface = _SURFACE_PATTERNS[
             (frame // 2) % len(_SURFACE_PATTERNS)
         ]
         lines = [
-            _top,
+            _CUP_TOP,
             f"     \u2502 {surface} \u251c\u2500\u2500\u256e",
-            f"     \u2502 {_hot_fill} \u2502  \u2502",
-            f"     \u2502 {_hot_fill} \u2502  \u2502",
-            f"     \u2502 {_hot_fill} \u251c\u2500\u2500\u256f",
-            _bot,
-            _saucer,
+            f"     \u2502 {_CUP_MED} \u2502  \u2502",
+            f"     \u2502 {_CUP_DARK} \u2502  \u2502",
+            f"     \u2502 {_CUP_DARK} \u251c\u2500\u2500\u256f",
+            _CUP_BOT,
+            _CUP_SAUCER,
         ]
     return "\n".join(lines)
 
@@ -157,14 +167,7 @@ BORDER_COLORS: list[str] = [
 def get_border_color(frame: int, *, paused: bool) -> str:
     """Return the border color for the current frame.
 
-    Changes every FPS//2 frames (twice per second) for a smooth breathing effect.
-
-    Args:
-        frame: Animation frame counter.
-        paused: Whether the engine is paused.
-
-    Returns:
-        A Rich color name string.
+    Changes twice per second for a smooth breathing effect.
     """
     if paused:
         return "yellow"
@@ -196,13 +199,6 @@ def get_quip(frame: int, *, paused: bool) -> str:
     """Return the current quip message.
 
     Rotates every 8 seconds (8 * FPS frames).
-
-    Args:
-        frame: Animation frame counter.
-        paused: Whether the engine is paused.
-
-    Returns:
-        A quip string.
     """
     if paused:
         return PAUSED_QUIP
@@ -239,24 +235,17 @@ def build_animated_display(
 ) -> Panel:
     """Build an animated Rich Panel showing keep-awake status with coffee art.
 
-    Args:
-        frame: Animation frame counter (increments at FPS rate).
-        mode: Active prevention mode.
-        uptime_seconds: How long the engine has been running.
-        duration_seconds: Total requested duration (None if indefinite).
-        interval: Refresh interval in seconds.
-        paused: Whether the engine is currently paused.
-        simulate: Whether input simulation is enabled.
-
-    Returns:
-        A Rich Panel with animated coffee cup, status info, and a quip.
+    Status fields are vertically centered beside the cup art for a
+    balanced layout.
     """
     steam = get_steam_frame(frame, paused=paused)
     cup = get_cup_art(frame, paused=paused)
     border_color = get_border_color(frame, paused=paused)
     quip = get_quip(frame, paused=paused)
 
-    status_str = "[yellow]Paused[/yellow]" if paused else "[green]Active[/green]"
+    status_str = (
+        "[yellow]Paused[/yellow]" if paused else "[green]Active[/green]"
+    )
 
     if duration_seconds is not None:
         remaining = max(0, duration_seconds - uptime_seconds)
@@ -279,12 +268,18 @@ def build_animated_display(
         f"Simulate:       {sim_str}",
     ]
 
+    # Vertically center status beside the art
+    status_offset = (len(art_lines) - len(status_fields)) // 2
+
     art_width = 26
     combined_lines: list[str] = []
-    max_rows = max(len(art_lines), len(status_fields))
+    max_rows = max(len(art_lines), len(status_fields) + status_offset)
     for i in range(max_rows):
         left = art_lines[i] if i < len(art_lines) else ""
-        right = status_fields[i] if i < len(status_fields) else ""
+        si = i - status_offset
+        right = ""
+        if 0 <= si < len(status_fields):
+            right = status_fields[si]
         combined_lines.append(f" {_pad_to(left, art_width)} {right}")
 
     combined_lines.append("")
