@@ -279,27 +279,30 @@ def build_animated_display(
         f"Simulate:       {sim_str}",
     ]
 
-    art_width = 27
+    art_width = 26
     combined_lines: list[str] = []
     max_rows = max(len(art_lines), len(status_fields))
     for i in range(max_rows):
         left = art_lines[i] if i < len(art_lines) else ""
         right = status_fields[i] if i < len(status_fields) else ""
-        combined_lines.append(f"  {_pad_to(left, art_width)} {right}")
+        combined_lines.append(f" {_pad_to(left, art_width)} {right}")
 
     combined_lines.append("")
     if paused:
-        combined_lines.append(f"  [yellow dim italic]{quip}[/yellow dim italic]")
+        combined_lines.append(
+            f" [yellow dim italic]{quip}[/yellow dim italic]"
+        )
     else:
-        combined_lines.append(f"  [dim italic]{quip}[/dim italic]")
+        combined_lines.append(f" [dim italic]{quip}[/dim italic]")
 
     combined_lines.append("")
-    combined_lines.append("  [dim]Press Ctrl+C to stop[/dim]")
+    combined_lines.append(" [dim]Press Ctrl+C to stop[/dim]")
 
     content = "\n".join(combined_lines)
     return Panel(
         content,
         title="[bold cyan]:coffee: Digital Caffeine[/bold cyan]",
         border_style=Style(color=border_color),
-        padding=(1, 2),
+        padding=(1, 1),
+        expand=False,
     )
