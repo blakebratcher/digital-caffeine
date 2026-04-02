@@ -33,15 +33,15 @@ def get_steam_frame(elapsed: int, *, paused: bool) -> str:
 # -- Cup art ------------------------------------------------------------------
 
 _CUP_ACTIVE: str = (
-    "   \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510 \u2510\n"
-    "   \u2502\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2502 \u2502\n"
-    "   \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518 \u2518"
+    "   ┌───────┐ ┐\n"
+    "   │▓▓▓▓▓▓▓│ │\n"
+    "   └───────┘ ┘"
 )
 
 _CUP_PAUSED: str = (
-    "   \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510 \u2510\n"
-    "   \u2502\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2502 \u2502\n"
-    "   \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518 \u2518"
+    "   ┌───────┐ ┐\n"
+    "   │░░░░░░░│ │\n"
+    "   └───────┘ ┘"
 )
 
 
@@ -57,7 +57,7 @@ def get_cup_art(*, paused: bool) -> str:
     return _CUP_PAUSED if paused else _CUP_ACTIVE
 
 
-# -- Border colors (4-step breathing cycle) -----------------------------------
+# -- Border colors (4-step color cycle) -----------------------------------
 
 BORDER_COLORS: list[str] = ["cyan", "dark_cyan", "bright_cyan", "dark_cyan"]
 
