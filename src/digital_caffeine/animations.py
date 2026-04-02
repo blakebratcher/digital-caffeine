@@ -27,14 +27,18 @@ def _pad_to(s: str, width: int) -> str:
     return s + " " * max(0, width - _visible_len(s))
 
 
-# -- Procedural steam generation ---------------------------------------------
+# -- Procedural steam generation with per-character color --------------------
 
 _STEAM_WIDTH = 25
 _STEAM_HEIGHT = 5
 
+# Wisp brightness by age (0 = near cup = brightest)
+_WISP_COLORS = ["#AAAAAA", "#888888", "#666666", "#555555", "#444444"]
+_TRAIL_COLORS = ["#777777", "#555555", "#444444", "#383838", "#303030"]
+
 
 def _generate_steam_frames() -> list[str]:
-    """Generate smooth steam animation frames with rising wisps and trails."""
+    """Generate steam frames with per-character color based on altitude."""
     cx = 12
     num_frames = 24
     age_chars = [")", "~", "'", "\u00b7", "."]
@@ -56,27 +60,51 @@ def _generate_steam_frames() -> list[str]:
 
     frames = []
     for f in range(num_frames):
-        grid = [[" "] * _STEAM_WIDTH for _ in range(_STEAM_HEIGHT)]
+        char_grid = [[" "] * _STEAM_WIDTH for _ in range(_STEAM_HEIGHT)]
+        color_grid = [[None] * _STEAM_WIDTH for _ in range(_STEAM_HEIGHT)]
+
         for birth, bx, amp, freq in wisps:
             age = (f - birth) % max_age
             row = _STEAM_HEIGHT - 1 - age
             drift = math.sin(f * freq + birth * 0.9) * amp
             x = int(round(bx + drift))
+
             if 0 <= row < _STEAM_HEIGHT:
                 char = age_chars[min(age, len(age_chars) - 1)]
-                if 0 <= x < _STEAM_WIDTH and grid[row][x] == " ":
-                    grid[row][x] = char
+                color = _WISP_COLORS[min(age, len(_WISP_COLORS) - 1)]
+                if 0 <= x < _STEAM_WIDTH and char_grid[row][x] == " ":
+                    char_grid[row][x] = char
+                    color_grid[row][x] = color
+
+            # Trail: one row below, fainter
             tr = row + 1
             if 0 <= tr < _STEAM_HEIGHT and age > 0:
                 tc = trail_chars[min(age - 1, len(trail_chars) - 1)]
+                tcol = _TRAIL_COLORS[
+                    min(age - 1, len(_TRAIL_COLORS) - 1)
+                ]
                 tx = int(round(bx + drift * 0.6))
                 if (
                     tc != " "
                     and 0 <= tx < _STEAM_WIDTH
-                    and grid[tr][tx] == " "
+                    and char_grid[tr][tx] == " "
                 ):
-                    grid[tr][tx] = tc
-        frames.append("\n".join("".join(row) for row in grid))
+                    char_grid[tr][tx] = tc
+                    color_grid[tr][tx] = tcol
+
+        # Render with per-character markup
+        frame_lines = []
+        for y in range(_STEAM_HEIGHT):
+            line = ""
+            for x in range(_STEAM_WIDTH):
+                c = char_grid[y][x]
+                col = color_grid[y][x]
+                if c != " " and col:
+                    line += f"[{col}]{c}[/]"
+                else:
+                    line += c
+            frame_lines.append(line)
+        frames.append("\n".join(frame_lines))
     return frames
 
 
@@ -86,13 +114,14 @@ STEAM_FRAMES: list[str] = _generate_steam_frames()
 def get_steam_frame(frame: int, *, paused: bool) -> str:
     """Return the steam art for the current frame.
 
+    Each steam character has its own color - bright near the cup,
+    fading to near-invisible at the top. Trails are even fainter.
     Steam advances at half the display FPS for natural rising speed.
     """
     if paused:
         return "\n".join([" " * _STEAM_WIDTH] * _STEAM_HEIGHT)
     sf = (frame // 2) % len(STEAM_FRAMES)
-    raw = STEAM_FRAMES[sf]
-    return "\n".join(f"[dim]{line}[/]" for line in raw.split("\n"))
+    return STEAM_FRAMES[sf]
 
 
 # -- Cup art with animated liquid surface ------------------------------------
@@ -108,13 +137,14 @@ _SURFACE_PATTERNS: list[str] = [
     "[#D2691E]\u2248~\u2248~\u2248\u2248~\u2248~\u2248~[/]",
 ]
 
-# Pre-built cup components
+# Pre-built cup components with hex color gradient
 _CUP_TOP = "     [white]\u250c" + "\u2500" * 13 + "\u2510[/]    "
 _CUP_BOT = "     [white]\u2514" + "\u2500" * 13 + "\u2518[/]    "
-_CUP_SAUCER = "    [dim]" + "\u2550" * 19 + "[/]  "
+_CUP_SAUCER = "    [#555555]" + "\u2550" * 19 + "[/]  "
 _CUP_DIM = "[dim]" + "\u2591" * 11 + "[/]"
-_CUP_MED = "[#A0522D]" + "\u2592" * 11 + "[/]"
-_CUP_DARK = "[#6B4226]" + "\u2593" * 11 + "[/]"
+_CUP_FILL_1 = "[#B8520A]" + "\u2592" * 11 + "[/]"
+_CUP_FILL_2 = "[#8B4513]" + "\u2593" * 11 + "[/]"
+_CUP_FILL_3 = "[#5C2E0E]" + "\u2593" * 11 + "[/]"
 
 # Pre-cached paused cup (never changes)
 _CUP_PAUSED: str = "\n".join([
@@ -131,8 +161,8 @@ _CUP_PAUSED: str = "\n".join([
 def get_cup_art(frame: int, *, paused: bool) -> str:
     """Return the coffee cup ASCII art for the current frame.
 
-    Active cups have a brown gradient with an animated liquid ripple
-    and white outline. Paused cups show dimmed fill (pre-cached).
+    Active cups show a 4-step brown gradient from warm surface to
+    dark bottom with an animated liquid ripple and white outline.
     """
     if paused:
         return _CUP_PAUSED
@@ -142,38 +172,47 @@ def get_cup_art(frame: int, *, paused: bool) -> str:
     lines = [
         _CUP_TOP,
         f"     [white]\u2502[/] {surface} [white]\u251c\u2500\u2500\u256e[/]",
-        f"     [white]\u2502[/] {_CUP_MED} [white]\u2502[/]  [white]\u2502[/]",
-        f"     [white]\u2502[/] {_CUP_DARK} [white]\u2502[/]  [white]\u2502[/]",
-        f"     [white]\u2502[/] {_CUP_DARK} [white]\u251c\u2500\u2500\u256f[/]",
+        f"     [white]\u2502[/] {_CUP_FILL_1} [white]\u2502[/]  [white]\u2502[/]",
+        f"     [white]\u2502[/] {_CUP_FILL_2} [white]\u2502[/]  [white]\u2502[/]",
+        f"     [white]\u2502[/] {_CUP_FILL_3} [white]\u251c\u2500\u2500\u256f[/]",
         _CUP_BOT,
         _CUP_SAUCER,
     ]
     return "\n".join(lines)
 
 
-# -- Border colors (8-step breathing cycle) ----------------------------------
+# -- Smooth RGB border breathing (32-step sine interpolation) ----------------
 
-BORDER_COLORS: list[str] = [
-    "bright_cyan",
-    "cyan",
-    "dark_cyan",
-    "dark_cyan",
-    "dark_cyan",
-    "cyan",
-    "bright_cyan",
-    "cyan",
-]
+
+def _generate_border_colors(steps: int = 32) -> list[str]:
+    """Generate a smooth breathing cycle between dark and bright cyan.
+
+    Uses sine interpolation for organic-feeling brightness changes.
+    No visible stepping between adjacent colors.
+    """
+    colors = []
+    for i in range(steps):
+        # Sine wave starting at minimum, peaking at steps/4
+        t = (math.sin(i / steps * 2 * math.pi - math.pi / 2) + 1) / 2
+        # Dark: #005555, Bright: #00DDDD
+        g = int(85 + t * 136)
+        b = int(85 + t * 136)
+        colors.append(f"#00{g:02x}{b:02x}")
+    return colors
+
+
+BORDER_COLORS: list[str] = _generate_border_colors()
 
 
 def get_border_color(frame: int, *, paused: bool) -> str:
     """Return the border color for the current frame.
 
-    Changes twice per second for a smooth breathing effect.
+    Advances every frame for buttery smooth breathing.
+    32 hex colors over 4 seconds at 8fps.
     """
     if paused:
         return "yellow"
-    step = max(1, FPS // 2)
-    return BORDER_COLORS[(frame // step) % len(BORDER_COLORS)]
+    return BORDER_COLORS[frame % len(BORDER_COLORS)]
 
 
 # -- Quips with typewriter effect --------------------------------------------
@@ -288,7 +327,7 @@ _ALL_QUIPS: list[str] = [
     "Your PC's spirit animal is an owl on espresso",
     "In a parallel universe, this PC is napping",
     "This is fine. Everything is fine.",
-    "Schrödinger's PC: simultaneously asleep and awake. JK, it's awake.",
+    "Schr\u00f6dinger's PC: asleep and awake. JK, it's awake.",
     "The mitochondria is the powerhouse. Caffeine is the keep-awake.",
     "Time is an illusion. Uptime doubly so.",
     "Your PC has transcended the sleep-wake cycle",
@@ -307,8 +346,9 @@ _ALL_QUIPS: list[str] = [
     "Keeping things percolating...",
 ]
 
-# Shuffle per-session so each launch feels different
+
 def _shuffle_quips() -> list[str]:
+    """Shuffle quip order per-session so each launch feels different."""
     import os
     import random
     rng = random.Random(os.getpid())

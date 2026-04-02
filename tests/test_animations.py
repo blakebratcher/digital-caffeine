@@ -74,14 +74,15 @@ def test_get_cup_art_surface_animates() -> None:
 # -- Border color tests --
 
 
-def test_border_colors_has_eight_entries() -> None:
-    assert len(BORDER_COLORS) == 8
+def test_border_colors_has_smooth_steps() -> None:
+    assert len(BORDER_COLORS) == 32
+    assert all(c.startswith("#") for c in BORDER_COLORS)
 
 
 def test_get_border_color_cycles() -> None:
-    step = max(1, FPS // 2)
-    colors = [get_border_color(frame=i * step, paused=False) for i in range(len(BORDER_COLORS))]
+    colors = [get_border_color(frame=i, paused=False) for i in range(32)]
     assert colors == BORDER_COLORS
+    assert get_border_color(frame=32, paused=False) == BORDER_COLORS[0]
 
 
 def test_get_border_color_paused_returns_yellow() -> None:
@@ -193,9 +194,8 @@ def test_build_animated_display_border_color_changes() -> None:
         paused=False,
         simulate=False,
     )
-    step = max(1, FPS // 2)
     panel_1 = build_animated_display(
-        frame=step,
+        frame=1,
         mode=Mode.DISPLAY_AND_SYSTEM,
         uptime_seconds=0,
         duration_seconds=None,
