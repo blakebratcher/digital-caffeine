@@ -92,8 +92,8 @@ def test_get_border_color_paused_returns_yellow() -> None:
 # -- Quip tests --
 
 
-def test_quips_has_at_least_ten() -> None:
-    assert len(QUIPS) >= 10
+def test_quips_has_many_entries() -> None:
+    assert len(QUIPS) >= 100
 
 
 def test_get_quip_rotates() -> None:

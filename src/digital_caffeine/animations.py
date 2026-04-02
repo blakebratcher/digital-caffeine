@@ -178,20 +178,144 @@ def get_border_color(frame: int, *, paused: bool) -> str:
 
 # -- Quips with typewriter effect --------------------------------------------
 
-QUIPS: list[str] = [
+_ALL_QUIPS: list[str] = [
+    # -- coffee puns --
     "Brewing productivity...",
-    "Your PC is caffeinated",
-    "Sleep is for the weak (and not this PC)",
-    "Keeping things percolating...",
-    "Another cup? Don't mind if I do",
-    "Drip, drip, drip... staying awake",
-    "Freshly brewed and wide awake",
-    "No decaf allowed here",
     "Espresso yourself freely",
     "A latte work getting done today",
     "Grounds for staying awake",
+    "Bean there, done that",
+    "Mocha your day productive",
+    "Don't lose your tamper",
+    "Brew-tally efficient",
+    "Affogato what sleep feels like",
+    "Pour decisions? Never heard of 'em",
+    "Words cannot espresso how awake this PC is",
+    "Better latte than never",
+    "You mocha me crazy",
+    "Sip happens",
+    "Thanks a latte",
+    "I like big mugs and I cannot lie",
+    "Rise and grind",
+    "Life begins after coffee",
+    "Deja brew: you've had this coffee before",
+    "Brew can do it",
+    "What's brewin', good lookin'?",
+    "Mugs and kisses",
+    "The daily grind, literally",
+    "Java the Hutt would be proud",
+    "No filter needed",
+    "Keep calm and drink coffee",
+    "Frappe-ning right now: productivity",
+    "Cold brew? Never. Hot and alert.",
+    "Percolating at maximum efficiency",
+    "Another shot? Don't mind if I do",
+    "Brewtiful day to stay awake",
+    "I've bean thinking about staying awake",
+    "Instant coffee is an oxymoron, like instant sleep",
+    "Drip, drip, drip... staying awake",
+    # -- sleep/awake --
+    "Sleep is for the weak (and not this PC)",
+    "Your PC refuses to sleep",
+    "This machine has a no-nap policy",
+    "Insomnia, but make it productive",
+    "Your PC is more awake than you are",
+    "Counting sheep? This PC doesn't know what sheep are",
+    "The only thing sleeping here is your screensaver",
+    "This PC runs on pure spite and caffeine",
+    "Sleep.exe has been permanently uninstalled",
+    "Who needs sleep when you have caffeine?",
+    "Power nap? More like power no",
+    "This machine hasn't blinked in hours",
+    "ZZZ? Not on my watch",
+    "Your PC is an insomniac and it's proud",
+    "The sandman was denied entry",
+    "Wide awake and slightly jittery",
+    "No rest for the wicked (or this PC)",
+    "Yawning is contagious. Good thing PCs can't yawn.",
+    "This PC pulled an all-nighter",
+    "Your PC's alarm clock is unnecessary",
+    "Lullabies have no power here",
+    "Naptime? We don't do that here",
+    "Your PC passed the vibe check: awake",
+    # -- tech humor --
+    "SetThreadExecutionState goes brrr",
+    "Keeping the electrons flowing",
+    "sudo keep-awake --force --forever",
+    "while(true) { stayAwake(); }",
+    "Your screensaver is filing a complaint",
+    "Power management has left the chat",
+    "The screen shall not dim",
+    "Task Manager can't stop what it can't see",
+    "Your IT admin would not approve",
+    "404: Sleep Not Found",
+    "Have you tried turning it off and... no. Absolutely not.",
+    "This violates at least three energy policies",
+    "Connection to sleep server: REFUSED",
+    "The power settings have been politely overruled",
+    "Kernel panic? More like kernel party",
+    "Running hot, staying cool",
+    "This process has elevated privileges (to party)",
+    "Uptime is the only metric that matters",
+    "ping localhost: awake, awake, awake",
+    "Thread status: caffeinated",
+    "Garbage collection? Not collecting this process",
+    "Exception: SleepNotAllowedException",
+    "Runtime: forever. Or until Ctrl+C.",
+    "Memory leak? No, memory feature",
+    # -- workplace --
+    "Look busy, stay caffeinated",
+    "Your Teams status: permanently green",
+    "Productivity level: caffeinated",
+    "HR can't prove you weren't at your desk",
+    "Working hard or hardly sleeping?",
+    "Annual review: never falls asleep on the job",
+    "If anyone asks, you've been here the whole time",
+    "Meeting in 5. Good thing the screen's still on.",
+    "The screensaver is on unpaid leave",
+    "This PC is doing the bare minimum... perfectly",
+    "Corporate wants you to keep working. PC agrees.",
+    "PTO stands for PC Turned On",
+    # -- absurd --
+    "Somewhere, a bear is jealous of your lack of hibernation",
+    "Running on vibes and voltage",
+    "The void stares back, but at least the screen is on",
+    "Your PC has evolved beyond the need for rest",
+    "Powered by caffeine and questionable decisions",
+    "The coffee is a metaphor. The wakefulness is literal.",
+    "One does not simply let Windows sleep",
+    "Instructions unclear, PC now runs on coffee",
+    "Your PC's spirit animal is an owl on espresso",
+    "In a parallel universe, this PC is napping",
+    "This is fine. Everything is fine.",
+    "Schrödinger's PC: simultaneously asleep and awake. JK, it's awake.",
+    "The mitochondria is the powerhouse. Caffeine is the keep-awake.",
+    "Time is an illusion. Uptime doubly so.",
+    "Your PC has transcended the sleep-wake cycle",
+    # -- self-referential --
+    "This animation runs at 8fps. You're welcome.",
+    "Handcrafted artisan wakefulness",
+    "Small program, big dreams",
+    "Still here. Still awake. Still caffeinated.",
+    "Keeping it real (and awake)",
+    "Just doing my job over here",
+    "Your PC is caffeinated",
+    "Freshly brewed and wide awake",
+    "No decaf allowed here",
     "This machine runs on caffeine",
+    "Another cup? Don't mind if I do",
+    "Keeping things percolating...",
 ]
+
+# Shuffle per-session so each launch feels different
+def _shuffle_quips() -> list[str]:
+    import os
+    import random
+    rng = random.Random(os.getpid())
+    return rng.sample(_ALL_QUIPS, len(_ALL_QUIPS))
+
+
+QUIPS: list[str] = _shuffle_quips()
 
 PAUSED_QUIP: str = "Gone cold... resume to reheat"
 
@@ -202,7 +326,8 @@ def get_quip(frame: int, *, paused: bool) -> str:
     """Return the current quip with a typewriter reveal effect.
 
     Characters appear two at a time with a blinking cursor while
-    typing. Once fully revealed, the cursor disappears.
+    typing. Once fully revealed, the cursor disappears. Quip order
+    is shuffled per-session so each launch shows a different sequence.
     """
     if paused:
         return PAUSED_QUIP
