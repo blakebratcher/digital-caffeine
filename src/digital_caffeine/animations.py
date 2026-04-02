@@ -7,17 +7,19 @@ from rich.style import Style
 
 from digital_caffeine.constants import Mode
 
-# -- Steam frames (4 frames, each 2 lines tall) ------------------------------
-# Characters cycle upward to create a rising-steam illusion.
+# -- Steam frames (6 frames, each 3 lines tall) ------------------------------
+# Characters cycle to create a rising-steam illusion.
 
 STEAM_FRAMES: list[str] = [
-    "    ~ ~  \n   ( _ ) ",
-    "   ( _ ) \n    ~ ~  ",
-    "   ~ . ~ \n  (  ~  )",
-    "  (  ~  )\n   ~ . ~ ",
+    "        )  )       \n       (  (        \n        )  )       ",
+    "       (  (        \n        )  )       \n         ~~        ",
+    "        )  )       \n         ~~        \n       (  (        ",
+    "         ~~        \n       (  (        \n        )  )       ",
+    "       (  (        \n        )  )       \n       (  (        ",
+    "        )  )       \n       (  (        \n         ~~        ",
 ]
 
-_BLANK_STEAM: str = "         \n         "
+_BLANK_STEAM: str = "                   \n                   \n                   "
 
 
 def get_steam_frame(elapsed: int, *, paused: bool) -> str:
@@ -38,15 +40,21 @@ def get_steam_frame(elapsed: int, *, paused: bool) -> str:
 # -- Cup art ------------------------------------------------------------------
 
 _CUP_ACTIVE: str = (
-    "   ┌───────┐ ┐\n"
-    "   │▓▓▓▓▓▓▓│ │\n"
-    "   └───────┘ ┘"
+    "     ┌───────────┐  \n"
+    "     │ ▓▓▓▓▓▓▓▓▓ ├╮\n"
+    "     │ ▓▓▓▓▓▓▓▓▓ ││\n"
+    "     │ ▓▓▓▓▓▓▓▓▓ ├╯\n"
+    "     └───────────┘  \n"
+    "    ═════════════════"
 )
 
 _CUP_PAUSED: str = (
-    "   ┌───────┐ ┐\n"
-    "   │░░░░░░░│ │\n"
-    "   └───────┘ ┘"
+    "     ┌───────────┐  \n"
+    "     │ ░░░░░░░░░ ├╮\n"
+    "     │ ░░░░░░░░░ ││\n"
+    "     │ ░░░░░░░░░ ├╯\n"
+    "     └───────────┘  \n"
+    "    ═════════════════"
 )
 
 
@@ -184,19 +192,17 @@ def build_animated_display(
         f"Uptime:         {format_time(uptime_seconds)}",
         f"Time remaining: {remaining_str}",
         f"Interval:       {interval}s",
+        f"Simulate:       {sim_str}",
     ]
 
     # Pad art lines to a uniform width for alignment
-    art_width = 20
+    art_width = 22
     combined_lines: list[str] = []
     max_rows = max(len(art_lines), len(status_fields))
     for i in range(max_rows):
         left = art_lines[i] if i < len(art_lines) else ""
         right = status_fields[i] if i < len(status_fields) else ""
         combined_lines.append(f"  {left:<{art_width}} {right}")
-
-    # Simulate line (below the main grid)
-    combined_lines.append(f"  {'':>{art_width}} Simulate:       {sim_str}")
 
     # Quip line
     combined_lines.append("")

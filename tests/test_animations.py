@@ -23,19 +23,19 @@ from digital_caffeine.constants import Mode
 # -- Steam frame tests --
 
 
-def test_steam_frames_has_four_frames() -> None:
-    assert len(STEAM_FRAMES) == 4
+def test_steam_frames_has_six_frames() -> None:
+    assert len(STEAM_FRAMES) == 6
 
 
 def test_get_steam_frame_cycles_through_frames() -> None:
-    for i in range(4):
+    for i in range(6):
         result = get_steam_frame(elapsed=i, paused=False)
         assert result == STEAM_FRAMES[i]
 
 
 def test_get_steam_frame_wraps_around() -> None:
-    assert get_steam_frame(elapsed=4, paused=False) == STEAM_FRAMES[0]
-    assert get_steam_frame(elapsed=7, paused=False) == STEAM_FRAMES[3]
+    assert get_steam_frame(elapsed=6, paused=False) == STEAM_FRAMES[0]
+    assert get_steam_frame(elapsed=11, paused=False) == STEAM_FRAMES[5]
 
 
 def test_get_steam_frame_paused_returns_blank_lines() -> None:
