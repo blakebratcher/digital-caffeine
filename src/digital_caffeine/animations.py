@@ -66,7 +66,6 @@ def _generate_steam_frames() -> list[str]:
                 char = age_chars[min(age, len(age_chars) - 1)]
                 if 0 <= x < _STEAM_WIDTH and grid[row][x] == " ":
                     grid[row][x] = char
-            # Trail: one row below the wisp, lighter character
             tr = row + 1
             if 0 <= tr < _STEAM_HEIGHT and age > 0:
                 tc = trail_chars[min(age - 1, len(trail_chars) - 1)]
@@ -110,43 +109,45 @@ _SURFACE_PATTERNS: list[str] = [
 ]
 
 # Pre-built cup components
-_CUP_TOP = "     \u250c" + "\u2500" * 13 + "\u2510    "
-_CUP_BOT = "     \u2514" + "\u2500" * 13 + "\u2518    "
+_CUP_TOP = "     [white]\u250c" + "\u2500" * 13 + "\u2510[/]    "
+_CUP_BOT = "     [white]\u2514" + "\u2500" * 13 + "\u2518[/]    "
 _CUP_SAUCER = "    [dim]" + "\u2550" * 19 + "[/]  "
 _CUP_DIM = "[dim]" + "\u2591" * 11 + "[/]"
 _CUP_MED = "[#A0522D]" + "\u2592" * 11 + "[/]"
 _CUP_DARK = "[#6B4226]" + "\u2593" * 11 + "[/]"
 
+# Pre-cached paused cup (never changes)
+_CUP_PAUSED: str = "\n".join([
+    _CUP_TOP,
+    f"     [white]\u2502[/] {_CUP_DIM} [white]\u251c\u2500\u2500\u256e[/]",
+    f"     [white]\u2502[/] {_CUP_DIM} [white]\u2502[/]  [white]\u2502[/]",
+    f"     [white]\u2502[/] {_CUP_DIM} [white]\u2502[/]  [white]\u2502[/]",
+    f"     [white]\u2502[/] {_CUP_DIM} [white]\u251c\u2500\u2500\u256f[/]",
+    _CUP_BOT,
+    _CUP_SAUCER,
+])
+
 
 def get_cup_art(frame: int, *, paused: bool) -> str:
     """Return the coffee cup ASCII art for the current frame.
 
-    Active cups have a brown gradient (light surface to dark bottom)
-    with an animated liquid ripple. Paused cups show dimmed fill.
+    Active cups have a brown gradient with an animated liquid ripple
+    and white outline. Paused cups show dimmed fill (pre-cached).
     """
     if paused:
-        lines = [
-            _CUP_TOP,
-            f"     \u2502 {_CUP_DIM} \u251c\u2500\u2500\u256e",
-            f"     \u2502 {_CUP_DIM} \u2502  \u2502",
-            f"     \u2502 {_CUP_DIM} \u2502  \u2502",
-            f"     \u2502 {_CUP_DIM} \u251c\u2500\u2500\u256f",
-            _CUP_BOT,
-            _CUP_SAUCER,
-        ]
-    else:
-        surface = _SURFACE_PATTERNS[
-            (frame // 2) % len(_SURFACE_PATTERNS)
-        ]
-        lines = [
-            _CUP_TOP,
-            f"     \u2502 {surface} \u251c\u2500\u2500\u256e",
-            f"     \u2502 {_CUP_MED} \u2502  \u2502",
-            f"     \u2502 {_CUP_DARK} \u2502  \u2502",
-            f"     \u2502 {_CUP_DARK} \u251c\u2500\u2500\u256f",
-            _CUP_BOT,
-            _CUP_SAUCER,
-        ]
+        return _CUP_PAUSED
+    surface = _SURFACE_PATTERNS[
+        (frame // 2) % len(_SURFACE_PATTERNS)
+    ]
+    lines = [
+        _CUP_TOP,
+        f"     [white]\u2502[/] {surface} [white]\u251c\u2500\u2500\u256e[/]",
+        f"     [white]\u2502[/] {_CUP_MED} [white]\u2502[/]  [white]\u2502[/]",
+        f"     [white]\u2502[/] {_CUP_DARK} [white]\u2502[/]  [white]\u2502[/]",
+        f"     [white]\u2502[/] {_CUP_DARK} [white]\u251c\u2500\u2500\u256f[/]",
+        _CUP_BOT,
+        _CUP_SAUCER,
+    ]
     return "\n".join(lines)
 
 
@@ -175,7 +176,7 @@ def get_border_color(frame: int, *, paused: bool) -> str:
     return BORDER_COLORS[(frame // step) % len(BORDER_COLORS)]
 
 
-# -- Quips -------------------------------------------------------------------
+# -- Quips with typewriter effect --------------------------------------------
 
 QUIPS: list[str] = [
     "Brewing productivity...",
@@ -194,16 +195,42 @@ QUIPS: list[str] = [
 
 PAUSED_QUIP: str = "Gone cold... resume to reheat"
 
+_QUIP_INTERVAL = 8  # seconds per quip
+
 
 def get_quip(frame: int, *, paused: bool) -> str:
-    """Return the current quip message.
+    """Return the current quip with a typewriter reveal effect.
 
-    Rotates every 8 seconds (8 * FPS frames).
+    Characters appear two at a time with a blinking cursor while
+    typing. Once fully revealed, the cursor disappears.
     """
     if paused:
         return PAUSED_QUIP
-    frames_per_quip = 8 * FPS
-    return QUIPS[(frame // frames_per_quip) % len(QUIPS)]
+    frames_per_quip = _QUIP_INTERVAL * FPS
+    quip_idx = (frame // frames_per_quip) % len(QUIPS)
+    quip = QUIPS[quip_idx]
+
+    frame_in_quip = frame % frames_per_quip
+    chars_to_show = min(len(quip), (frame_in_quip + 1) * 2)
+
+    if chars_to_show < len(quip):
+        cursor = "\u2588" if (frame % 6) < 3 else " "
+        return quip[:chars_to_show] + cursor
+    return quip
+
+
+# -- Progress bar ------------------------------------------------------------
+
+
+def _build_progress_bar(
+    elapsed: int, total: int, width: int = 20
+) -> str:
+    """Build a visual progress bar for timed sessions."""
+    progress = min(1.0, elapsed / max(1, total))
+    filled = int(progress * width)
+    bar = "\u2593" * filled + "\u2591" * (width - filled)
+    pct = int(progress * 100)
+    return f"[cyan]{bar}[/] [dim]{pct}%[/]"
 
 
 # -- Display assembly --------------------------------------------------------
@@ -235,8 +262,8 @@ def build_animated_display(
 ) -> Panel:
     """Build an animated Rich Panel showing keep-awake status with coffee art.
 
-    Status fields are vertically centered beside the cup art for a
-    balanced layout.
+    Status fields are vertically centered beside the cup art. A progress
+    bar appears when a duration is set.
     """
     steam = get_steam_frame(frame, paused=paused)
     cup = get_cup_art(frame, paused=paused)
@@ -268,13 +295,20 @@ def build_animated_display(
         f"Simulate:       {sim_str}",
     ]
 
+    if duration_seconds is not None:
+        status_fields.append("")
+        status_fields.append(
+            _build_progress_bar(uptime_seconds, duration_seconds)
+        )
+
     # Vertically center status beside the art
     status_offset = (len(art_lines) - len(status_fields)) // 2
+    status_offset = max(0, status_offset)
 
     art_width = 26
     combined_lines: list[str] = []
-    max_rows = max(len(art_lines), len(status_fields) + status_offset)
-    for i in range(max_rows):
+    total_rows = max(len(art_lines), len(status_fields) + status_offset)
+    for i in range(total_rows):
         left = art_lines[i] if i < len(art_lines) else ""
         si = i - status_offset
         right = ""
