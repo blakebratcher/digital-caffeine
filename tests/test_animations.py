@@ -2,16 +2,23 @@
 
 from __future__ import annotations
 
+from io import StringIO
+
+from rich.console import Console
+from rich.panel import Panel
+
 from digital_caffeine.animations import (
     BORDER_COLORS,
     PAUSED_QUIP,
     QUIPS,
     STEAM_FRAMES,
+    build_animated_display,
     get_border_color,
     get_cup_art,
     get_quip,
     get_steam_frame,
 )
+from digital_caffeine.constants import Mode
 
 # -- Steam frame tests --
 
@@ -91,3 +98,107 @@ def test_get_quip_wraps_around() -> None:
 def test_get_quip_paused_returns_paused_quip() -> None:
     assert get_quip(elapsed=0, paused=True) == PAUSED_QUIP
     assert get_quip(elapsed=99, paused=True) == PAUSED_QUIP
+
+
+# -- build_animated_display tests --
+
+
+def test_build_animated_display_returns_panel() -> None:
+    result = build_animated_display(
+        mode=Mode.DISPLAY_AND_SYSTEM,
+        uptime_seconds=0,
+        duration_seconds=None,
+        interval=60,
+        paused=False,
+        simulate=False,
+    )
+    assert isinstance(result, Panel)
+
+
+def test_build_animated_display_contains_status_info() -> None:
+    buf = StringIO()
+    console = Console(file=buf, force_terminal=True, width=80)
+    panel = build_animated_display(
+        mode=Mode.DISPLAY_AND_SYSTEM,
+        uptime_seconds=65,
+        duration_seconds=3600,
+        interval=60,
+        paused=False,
+        simulate=True,
+    )
+    console.print(panel)
+    output = buf.getvalue()
+
+    assert "Active" in output
+    assert "Display + System" in output
+    assert "00:01:05" in output  # uptime
+    assert "00:58:55" in output  # remaining
+    assert "60s" in output
+
+
+def test_build_animated_display_paused_state() -> None:
+    buf = StringIO()
+    console = Console(file=buf, force_terminal=True, width=80)
+    panel = build_animated_display(
+        mode=Mode.DISPLAY_AND_SYSTEM,
+        uptime_seconds=10,
+        duration_seconds=None,
+        interval=60,
+        paused=True,
+        simulate=False,
+    )
+    console.print(panel)
+    output = buf.getvalue()
+
+    assert "Paused" in output
+    assert "Gone cold" in output
+
+
+def test_build_animated_display_border_color_changes() -> None:
+    panel_0 = build_animated_display(
+        mode=Mode.DISPLAY_AND_SYSTEM,
+        uptime_seconds=0,
+        duration_seconds=None,
+        interval=60,
+        paused=False,
+        simulate=False,
+    )
+    panel_1 = build_animated_display(
+        mode=Mode.DISPLAY_AND_SYSTEM,
+        uptime_seconds=1,
+        duration_seconds=None,
+        interval=60,
+        paused=False,
+        simulate=False,
+    )
+    # Border styles should differ between frame 0 and frame 1
+    assert panel_0.border_style != panel_1.border_style
+
+
+def test_build_animated_display_quip_rotates() -> None:
+    buf_0 = StringIO()
+    console_0 = Console(file=buf_0, force_terminal=True, width=80)
+    panel_0 = build_animated_display(
+        mode=Mode.DISPLAY_AND_SYSTEM,
+        uptime_seconds=0,
+        duration_seconds=None,
+        interval=60,
+        paused=False,
+        simulate=False,
+    )
+    console_0.print(panel_0)
+
+    buf_8 = StringIO()
+    console_8 = Console(file=buf_8, force_terminal=True, width=80)
+    panel_8 = build_animated_display(
+        mode=Mode.DISPLAY_AND_SYSTEM,
+        uptime_seconds=8,
+        duration_seconds=None,
+        interval=60,
+        paused=False,
+        simulate=False,
+    )
+    console_8.print(panel_8)
+
+    # The quip text should differ between second 0 and second 8
+    assert buf_0.getvalue() != buf_8.getvalue()
