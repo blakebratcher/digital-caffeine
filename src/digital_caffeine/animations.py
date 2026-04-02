@@ -117,15 +117,15 @@ def get_quip(elapsed: int, *, paused: bool) -> str:
     return QUIPS[(elapsed // 8) % len(QUIPS)]
 
 
-# Maps Mode enum to display labels
-_MODE_DISPLAY: dict[Mode, str] = {
+# Maps Mode enum to display labels (used by both animations and CLI)
+MODE_DISPLAY: dict[Mode, str] = {
     Mode.DISPLAY_AND_SYSTEM: "Display + System",
     Mode.DISPLAY_ONLY: "Display Only",
     Mode.SYSTEM_ONLY: "System Only",
 }
 
 
-def _format_time(seconds: int) -> str:
+def format_time(seconds: int) -> str:
     """Format an integer number of seconds as HH:MM:SS."""
     h = seconds // 3600
     m = (seconds % 3600) // 60
@@ -165,7 +165,7 @@ def build_animated_display(
 
     if duration_seconds is not None:
         remaining = max(0, duration_seconds - uptime_seconds)
-        remaining_str = _format_time(remaining)
+        remaining_str = format_time(remaining)
     else:
         remaining_str = "Indefinite"
 
@@ -180,8 +180,8 @@ def build_animated_display(
 
     status_fields = [
         f"Status:         {status_str}",
-        f"Mode:           {_MODE_DISPLAY.get(mode, str(mode))}",
-        f"Uptime:         {_format_time(uptime_seconds)}",
+        f"Mode:           {MODE_DISPLAY.get(mode, str(mode))}",
+        f"Uptime:         {format_time(uptime_seconds)}",
         f"Time remaining: {remaining_str}",
         f"Interval:       {interval}s",
     ]

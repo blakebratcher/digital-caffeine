@@ -12,7 +12,7 @@ from rich.live import Live
 from rich.panel import Panel
 
 from digital_caffeine import __version__
-from digital_caffeine.animations import build_animated_display
+from digital_caffeine.animations import MODE_DISPLAY, build_animated_display, format_time
 from digital_caffeine.config import get_config_path, load_config
 from digital_caffeine.constants import Mode
 
@@ -23,13 +23,6 @@ MODE_MAP: dict[str, Mode] = {
     "all": Mode.DISPLAY_AND_SYSTEM,
     "display": Mode.DISPLAY_ONLY,
     "system": Mode.SYSTEM_ONLY,
-}
-
-# Reverse map for display purposes
-MODE_DISPLAY: dict[Mode, str] = {
-    Mode.DISPLAY_AND_SYSTEM: "Display + System",
-    Mode.DISPLAY_ONLY: "Display Only",
-    Mode.SYSTEM_ONLY: "System Only",
 }
 
 
@@ -72,13 +65,6 @@ def parse_duration(s: str) -> int:
 
     return total
 
-
-def format_time(seconds: int) -> str:
-    """Format an integer number of seconds as HH:MM:SS."""
-    h = seconds // 3600
-    m = (seconds % 3600) // 60
-    s = seconds % 60
-    return f"{h:02d}:{m:02d}:{s:02d}"
 
 
 def build_display(
