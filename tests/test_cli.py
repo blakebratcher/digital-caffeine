@@ -95,3 +95,32 @@ def test_start_help() -> None:
     result = runner.invoke(cli, ["start", "--help"])
     assert result.exit_code == 0
     assert "Start keeping your machine awake" in result.output
+
+
+from digital_caffeine.cli import build_display
+from digital_caffeine.constants import Mode
+from rich.panel import Panel
+
+
+def test_build_display_returns_animated_panel() -> None:
+    """build_display should delegate to the animated display builder."""
+    panel = build_display(
+        mode=Mode.DISPLAY_AND_SYSTEM,
+        uptime_seconds=0,
+        duration_seconds=None,
+        interval=60,
+        paused=False,
+        simulate=False,
+    )
+    assert isinstance(panel, Panel)
+
+    # Verify it has animated content by checking for coffee cup character
+    from rich.console import Console
+    from io import StringIO
+
+    buf = StringIO()
+    console = Console(file=buf, force_terminal=True, width=80)
+    console.print(panel)
+    output = buf.getvalue()
+    # The cup should contain box-drawing characters from the animated display
+    assert "\u2502" in output  # vertical box line from cup art

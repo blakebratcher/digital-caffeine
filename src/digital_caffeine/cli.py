@@ -12,6 +12,7 @@ from rich.live import Live
 from rich.panel import Panel
 
 from digital_caffeine import __version__
+from digital_caffeine.animations import build_animated_display
 from digital_caffeine.config import get_config_path, load_config
 from digital_caffeine.constants import Mode
 
@@ -89,44 +90,17 @@ def build_display(
     paused: bool,
     simulate: bool,
 ) -> Panel:
-    """Build a Rich Panel showing the current keep-awake status.
+    """Build a Rich Panel showing the current keep-awake status with animations.
 
-    Args:
-        mode: Active prevention mode.
-        uptime_seconds: How long the engine has been running.
-        duration_seconds: Total requested duration (None if indefinite).
-        interval: Refresh interval in seconds.
-        paused: Whether the engine is currently paused.
-
-    Returns:
-        A Rich Panel ready for display.
+    Delegates to the animations module for coffee-themed display.
     """
-    status_str = "[yellow]Paused[/yellow]" if paused else "[green]Active[/green]"
-
-    remaining_str: str
-    if duration_seconds is not None:
-        remaining = max(0, duration_seconds - uptime_seconds)
-        remaining_str = format_time(remaining)
-    else:
-        remaining_str = "Indefinite"
-
-    lines = [
-        f"  Status:          {status_str}",
-        f"  Mode:            {MODE_DISPLAY.get(mode, str(mode))}",
-        f"  Uptime:          {format_time(uptime_seconds)}",
-        f"  Time remaining:  {remaining_str}",
-        f"  Interval:        {interval}s",
-        f"  Simulate:        {'[green]On[/green]' if simulate else '[dim]Off[/dim]'}",
-        "",
-        "  [dim]Press Ctrl+C to stop[/dim]",
-    ]
-
-    content = "\n".join(lines)
-    return Panel(
-        content,
-        title="[bold cyan]:coffee: Digital Caffeine[/bold cyan]",
-        border_style="cyan",
-        padding=(1, 2),
+    return build_animated_display(
+        mode=mode,
+        uptime_seconds=uptime_seconds,
+        duration_seconds=duration_seconds,
+        interval=interval,
+        paused=paused,
+        simulate=simulate,
     )
 
 
