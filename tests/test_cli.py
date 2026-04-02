@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from io import StringIO
 from unittest.mock import patch
 
 import click
 import pytest
 from click.testing import CliRunner
+from rich.console import Console
+from rich.panel import Panel
 
-from digital_caffeine.cli import cli, format_time, parse_duration
+from digital_caffeine.cli import build_display, cli, format_time, parse_duration
+from digital_caffeine.constants import Mode
 
 # -- parse_duration tests --
 
@@ -97,11 +101,6 @@ def test_start_help() -> None:
     assert "Start keeping your machine awake" in result.output
 
 
-from digital_caffeine.cli import build_display
-from digital_caffeine.constants import Mode
-from rich.panel import Panel
-
-
 def test_build_display_returns_animated_panel() -> None:
     """build_display should delegate to the animated display builder."""
     panel = build_display(
@@ -115,9 +114,6 @@ def test_build_display_returns_animated_panel() -> None:
     assert isinstance(panel, Panel)
 
     # Verify it has animated content by checking for coffee cup character
-    from rich.console import Console
-    from io import StringIO
-
     buf = StringIO()
     console = Console(file=buf, force_terminal=True, width=80)
     console.print(panel)
