@@ -12,7 +12,7 @@ from rich.live import Live
 from rich.panel import Panel
 
 from digital_caffeine import __version__
-from digital_caffeine.animations import MODE_DISPLAY, build_animated_display, format_time
+from digital_caffeine.animations import FPS, MODE_DISPLAY, build_animated_display, format_time
 from digital_caffeine.config import get_config_path, load_config
 from digital_caffeine.constants import Mode
 
@@ -69,6 +69,7 @@ def parse_duration(s: str) -> int:
 
 def build_display(
     *,
+    frame: int = 0,
     mode: Mode,
     uptime_seconds: int,
     duration_seconds: int | None,
@@ -81,6 +82,7 @@ def build_display(
     Delegates to the animations module for coffee-themed display.
     """
     return build_animated_display(
+        frame=frame,
         mode=mode,
         uptime_seconds=uptime_seconds,
         duration_seconds=duration_seconds,
@@ -193,9 +195,11 @@ def start(
         f"[green]Digital Caffeine started[/green] - mode={MODE_DISPLAY[mode]}, interval={interval}s"
     )
 
+    frame = 0
     try:
         with Live(
             build_display(
+                frame=0,
                 mode=mode,
                 uptime_seconds=0,
                 duration_seconds=duration_seconds,
@@ -204,7 +208,7 @@ def start(
                 simulate=simulate,
             ),
             console=console,
-            refresh_per_second=1,
+            refresh_per_second=FPS,
             transient=False,
         ) as live:
             while True:
@@ -216,6 +220,7 @@ def start(
 
                 live.update(
                     build_display(
+                        frame=frame,
                         mode=mode,
                         uptime_seconds=elapsed,
                         duration_seconds=duration_seconds,
@@ -224,7 +229,8 @@ def start(
                         simulate=simulate,
                     )
                 )
-                time.sleep(1)
+                frame += 1
+                time.sleep(1 / FPS)
     except KeyboardInterrupt:
         pass
     finally:
