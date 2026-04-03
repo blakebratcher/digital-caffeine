@@ -69,7 +69,7 @@ def dither_pick(color_a: int, color_b: int, x: int, y: int) -> int:
 
 # Cycling groups: tuples of palette indices that rotate together
 _COFFEE_CYCLE = (5, 6, 7)    # Amber, Gold, Cream - liquid shimmer
-_STEAM_CYCLE = (7, 13, 1)    # Cream, Warm Gray, Deep Navy - steam fade
+_STEAM_CYCLE = (12, 13, 1)   # Slate, Warm Gray, Deep Navy - steam fade
 
 _COFFEE_RATE = 4   # Rotate every N frames
 _STEAM_RATE = 6    # Rotate every N frames

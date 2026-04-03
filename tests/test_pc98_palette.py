@@ -41,7 +41,6 @@ class TestCyclePalette:
 
     def test_advance_changes_cycling_indices(self):
         cp = CyclePalette()
-        original_5 = cp.get_rgb(5)
         # Advance coffee cycle (indices 5,6,7 rotate every 4 frames)
         for _ in range(4):
             cp.advance()
