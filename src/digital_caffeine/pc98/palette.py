@@ -68,11 +68,10 @@ def dither_pick(color_a: int, color_b: int, x: int, y: int) -> int:
 # -- Palette cycling ----------------------------------------------------------
 
 # Cycling groups: tuples of palette indices that rotate together
+# Only cycle colors NOT used in large static areas (background, table, cup walls)
 _COFFEE_CYCLE = (5, 6, 7)    # Amber, Gold, Cream - liquid shimmer
-_STEAM_CYCLE = (12, 13, 1)   # Slate, Warm Gray, Deep Navy - steam fade
 
 _COFFEE_RATE = 4   # Rotate every N frames
-_STEAM_RATE = 6    # Rotate every N frames
 
 
 class CyclePalette:
@@ -85,15 +84,12 @@ class CyclePalette:
     def __init__(self) -> None:
         self._frame = 0
         self._coffee_offset = 0
-        self._steam_offset = 0
 
     def advance(self) -> None:
         """Advance one frame. Rotates cycling groups at their rates."""
         self._frame += 1
         if self._frame % _COFFEE_RATE == 0:
             self._coffee_offset = (self._coffee_offset + 1) % len(_COFFEE_CYCLE)
-        if self._frame % _STEAM_RATE == 0:
-            self._steam_offset = (self._steam_offset + 1) % len(_STEAM_CYCLE)
 
     def get_rgb(self, index: int) -> tuple[int, int, int]:
         """Return the current RGB for a palette index, accounting for cycling."""
@@ -128,7 +124,4 @@ class CyclePalette:
         if index in _COFFEE_CYCLE:
             pos = _COFFEE_CYCLE.index(index)
             return _COFFEE_CYCLE[(pos + self._coffee_offset) % len(_COFFEE_CYCLE)]
-        if index in _STEAM_CYCLE:
-            pos = _STEAM_CYCLE.index(index)
-            return _STEAM_CYCLE[(pos + self._steam_offset) % len(_STEAM_CYCLE)]
         return index
