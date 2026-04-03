@@ -71,6 +71,14 @@ def test_get_cup_art_surface_animates() -> None:
     assert art_0 != art_2
 
 
+def test_get_cup_art_surface_glow_shifts() -> None:
+    """Surface color oscillates over time, so distant frames differ."""
+    art_0 = get_cup_art(frame=0, paused=False)
+    # ~2 seconds later at 24 FPS = 48 frames, should be at a different glow phase
+    art_48 = get_cup_art(frame=48, paused=False)
+    assert art_0 != art_48
+
+
 # -- Border color tests --
 
 

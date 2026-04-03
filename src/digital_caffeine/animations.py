@@ -161,18 +161,67 @@ def get_steam_frame(frame: int, *, paused: bool) -> str:
     return STEAM_FRAMES[sf]
 
 
-# -- Cup art with animated liquid surface ------------------------------------
+# -- Cup art with animated liquid surface, glow, and shimmer ----------------
 
-_SURFACE_PATTERNS: list[str] = [
-    "[#D2691E]~\u2248~\u2248~\u2248~\u2248~\u2248~[/]",
-    "[#D2691E]~\u2248\u2248~\u2248~\u2248\u2248~\u2248~[/]",
-    "[#D2691E]\u2248~\u2248~\u2248~\u2248~\u2248~\u2248[/]",
-    "[#D2691E]\u2248~\u2248\u2248~\u2248\u2248~\u2248~\u2248[/]",
-    "[#D2691E]\u2248~~\u2248~~\u2248~~\u2248~[/]",
-    "[#D2691E]~\u2248\u2248~\u2248\u2248~\u2248\u2248~\u2248[/]",
-    "[#D2691E]~\u2248~\u2248\u2248~\u2248~\u2248~\u2248[/]",
-    "[#D2691E]\u2248~\u2248~\u2248\u2248~\u2248~\u2248~[/]",
+# 16 ripple patterns (characters only - color applied dynamically)
+_SURFACE_CHARS: list[str] = [
+    "~\u2248~\u2248~\u2248~\u2248~\u2248~",
+    "~\u2248\u2248~\u2248~\u2248\u2248~\u2248~",
+    "\u2248~\u2248~\u2248~\u2248~\u2248~\u2248",
+    "\u2248~\u2248\u2248~\u2248\u2248~\u2248~\u2248",
+    "\u2248~~\u2248~~\u2248~~\u2248~",
+    "~\u2248\u2248~\u2248\u2248~\u2248\u2248~\u2248",
+    "~\u2248~\u2248\u2248~\u2248~\u2248~\u2248",
+    "\u2248~\u2248~\u2248\u2248~\u2248~\u2248~",
+    "~\u2248~\u2248~\u2248~\u2248\u2248~\u2248",
+    "\u2248\u2248~\u2248~\u2248~\u2248~\u2248~",
+    "~\u2248\u2248~\u2248~\u2248\u2248~\u2248\u2248",
+    "\u2248~\u2248\u2248~\u2248~\u2248~\u2248~",
+    "~\u2248~\u2248\u2248\u2248~\u2248~\u2248~",
+    "\u2248~\u2248~\u2248~\u2248\u2248\u2248~\u2248",
+    "\u2248\u2248~\u2248~~\u2248~\u2248\u2248~",
+    "~\u2248\u2248\u2248~\u2248~\u2248~\u2248~",
 ]
+
+
+def _surface_color(frame: int) -> str:
+    """Return the surface color for the current frame.
+
+    Oscillates between chocolate (#D2691E) and warm gold (#FFB347)
+    using sine interpolation over ~4 seconds.
+    """
+    t = (math.sin(frame / (4 * FPS) * 2 * math.pi) + 1) / 2
+    # Interpolate RGB: #D2691E -> #FFB347
+    r = int(0xD2 + t * (0xFF - 0xD2))
+    g = int(0x69 + t * (0xB3 - 0x69))
+    b = int(0x1E + t * (0x47 - 0x1E))
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def _surface_with_shimmer(frame: int) -> str:
+    """Build the animated surface line with color glow and shimmer highlights.
+
+    1-2 positions per frame get a gold highlight for light-catching effect.
+    """
+    pattern_idx = (frame // 3) % len(_SURFACE_CHARS)
+    chars = list(_SURFACE_CHARS[pattern_idx])
+    color = _surface_color(frame)
+
+    # Deterministic shimmer: replace 1-2 chars with gold highlights
+    shimmer_seed = frame * 17 + 7
+    for i in range(2):
+        pos = (shimmer_seed + i * 11) % len(chars)
+        if (shimmer_seed + i) % 7 < 3:
+            chars[pos] = "*" if i == 0 else "'"
+
+    # Build markup: shimmer chars get gold, rest get glow color
+    result = ""
+    for j, ch in enumerate(chars):
+        if ch in ("*", "'"):
+            result += f"[#FFD700]{ch}[/]"
+        else:
+            result += f"[{color}]{ch}[/]"
+    return result
 
 # Pre-built cup components with hex color gradient
 _CUP_TOP = "     [white]\u250c" + "\u2500" * 13 + "\u2510[/]    "
@@ -198,20 +247,27 @@ _CUP_PAUSED: str = "\n".join([
 def get_cup_art(frame: int, *, paused: bool) -> str:
     """Return the coffee cup ASCII art for the current frame.
 
-    Active cups show a 4-step brown gradient from warm surface to
-    dark bottom with an animated liquid ripple and white outline.
+    Active cups show a 4-step brown gradient with an animated liquid
+    ripple that glows between chocolate and gold. Shimmer highlights
+    catch the light. Handle breathes in sync with border cycle.
     """
     if paused:
         return _CUP_PAUSED
-    surface = _SURFACE_PATTERNS[
-        (frame // 2) % len(_SURFACE_PATTERNS)
-    ]
+
+    surface = _surface_with_shimmer(frame)
+
+    # Handle breathing: cycle between white and dim white in sync with border
+    handle_phase = (frame // 2) % 72  # same cycle as border
+    ht = (math.sin(handle_phase / 72 * 2 * math.pi) + 1) / 2
+    hv = int(170 + ht * 85)  # #AAAAAA to #FFFFFF
+    hcolor = f"#{hv:02x}{hv:02x}{hv:02x}"
+
     lines = [
         _CUP_TOP,
-        f"     [white]\u2502[/] {surface} [white]\u251c\u2500\u2500\u256e[/]",
-        f"     [white]\u2502[/] {_CUP_FILL_1} [white]\u2502[/]  [white]\u2502[/]",
-        f"     [white]\u2502[/] {_CUP_FILL_2} [white]\u2502[/]  [white]\u2502[/]",
-        f"     [white]\u2502[/] {_CUP_FILL_3} [white]\u251c\u2500\u2500\u256f[/]",
+        f"     [white]\u2502[/] {surface} [{hcolor}]\u251c\u2500\u2500\u256e[/]",
+        f"     [white]\u2502[/] {_CUP_FILL_1} [{hcolor}]\u2502[/]  [{hcolor}]\u2502[/]",
+        f"     [white]\u2502[/] {_CUP_FILL_2} [{hcolor}]\u2502[/]  [{hcolor}]\u2502[/]",
+        f"     [white]\u2502[/] {_CUP_FILL_3} [{hcolor}]\u251c\u2500\u2500\u256f[/]",
         _CUP_BOT,
         _CUP_SAUCER,
     ]
