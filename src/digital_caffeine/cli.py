@@ -97,7 +97,7 @@ def _can_use_pc98() -> bool:
     try:
         import shutil
         cols, rows = shutil.get_terminal_size()
-        if cols < 80 or rows < 30:
+        if cols < 80 or rows < 40:
             return False
         if console.color_system != "truecolor":
             return False

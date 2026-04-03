@@ -113,8 +113,9 @@ class DripSystem:
         self._drips = [d for d in self._drips if d.active]
         if self.frame % self._spawn_interval == 0 and len(self._drips) < 2:
             seed = self.frame * 31 + 17
-            x = self.x_min + (seed % (self.x_max - self.x_min))
-            self._drips.append(DripParticle(x=x, y=float(self.spawn_y)))
+            if (self.frame // 60) % 5 < 2:  # ~40% chance using different bits
+                x = self.x_min + (seed % (self.x_max - self.x_min))
+                self._drips.append(DripParticle(x=x, y=float(self.spawn_y)))
 
     def get_draw_list(self) -> list[tuple[int, int, int]]:
         draws = []
