@@ -11,15 +11,13 @@ from digital_caffeine.pc98.palette import (
     STEEL_BLUE,
 )
 
-# Ornate box drawing for PC-98 VN feel
-_TL = "\u2554"  # double top-left
-_TR = "\u2557"  # double top-right
-_BL = "\u255a"  # double bottom-left
-_BR = "\u255d"  # double bottom-right
-_H = "\u2550"   # double horizontal
-_V = "\u2551"   # double vertical
+_H = "\u2500"   # horizontal line
+_V = "\u2502"   # vertical line
+_TL = "\u250c"  # top-left corner
+_TR = "\u2510"  # top-right corner
+_BL = "\u2514"  # bottom-left corner
+_BR = "\u2518"  # bottom-right corner
 _DIAMOND = "\u25c6"
-_DOT = "\u00b7"
 
 
 def _format_time(seconds: int) -> str:
@@ -59,46 +57,43 @@ def format_status_text(
     uptime_str = _format_time(uptime_seconds)
     sim_str = f"[{gold}]On[/]" if simulate else "[dim]Off[/]"
 
-    w = 26
+    # Short mode label to fit panel
+    mode_short = mode_label.replace("Display + System", "Disp+Sys")
+    mode_short = mode_short.replace("Display Only", "Display")
+    mode_short = mode_short.replace("System Only", "System")
+
+    w = 24
     b = f"[{blue}]"
-    d = f"[{rose}]{_DOT}[/]"  # decorative dot
-    bar_top = f"  {b}{_TL}{_H}{_H}[/]{d}{b}{_H * (w - 4)}{_H}[/]{d}{b}{_H}{_TR}[/]"
-    bar_bot = f"  {b}{_BL}{_H}{_H}[/]{d}{b}{_H * (w - 4)}{_H}[/]{d}{b}{_H}{_BR}[/]"
+    top = f" {b}{_TL}{_H * w}{_TR}[/]"
+    bot = f" {b}{_BL}{_H * w}{_BR}[/]"
+    sep = f" {b}{_V}{_H * w}{_V}[/]"
 
     lines = [
         "",
-        bar_top,
-        f"  {b}{_V}[/] [{gold} bold]{_DIAMOND} STATUS {_DIAMOND}[/]",
-        f"  {b}{_V}[/]{b}{_H * w}{_V}[/]",
-        f"  {b}{_V}[/] [{white}]State:[/]    {state_str}",
-        f"  {b}{_V}[/] [{white}]Mode:[/]     [{rose}]{mode_label}[/]",
-        f"  {b}{_V}[/] [{white}]Uptime:[/]   [{white}]{uptime_str}[/]",
-        f"  {b}{_V}[/] [{white}]Remain:[/]   {remaining_str}",
-        f"  {b}{_V}[/] [{white}]Interval:[/] {interval}s",
-        f"  {b}{_V}[/] [{white}]Simulate:[/] {sim_str}",
-        bar_bot,
+        top,
+        f" {b}{_V}[/][{gold} bold] {_DIAMOND} STATUS[/]",
+        sep,
+        f" {b}{_V}[/] [{white}]State:[/]  {state_str}",
+        f" {b}{_V}[/] [{white}]Mode:[/]   [{rose}]{mode_short}[/]",
+        f" {b}{_V}[/] [{white}]Uptime:[/] [{white}]{uptime_str}[/]",
+        f" {b}{_V}[/] [{white}]Left:[/]   {remaining_str}",
+        f" {b}{_V}[/] [{white}]Every:[/]  {interval}s",
+        f" {b}{_V}[/] [{white}]Jiggle:[/] {sim_str}",
+        bot,
     ]
 
     if progress_pct is not None:
-        bar_w = 22
+        bar_w = 18
         filled = int(progress_pct / 100 * bar_w)
-        bar_chars = ""
+        bar = ""
         for i in range(bar_w):
             if i < filled:
-                bar_chars += f"[{mag}]\u2593[/]"
+                bar += f"[{mag}]\u2593[/]"
             else:
-                bar_chars += f"[{blue}]\u2591[/]"
+                bar += f"[{blue}]\u2591[/]"
         lines.append("")
-        lines.append(
-            f"  {b}{_TL}{_H}[/][{rose}]{_DOT}[/]"
-            f"{b}{_H * (w - 4)}[/]"
-            f"[{rose}]{_DOT}[/]{b}{_H}{_TR}[/]"
-        )
-        lines.append(f"  {b}{_V}[/] {bar_chars} [{white}]{progress_pct}%[/]")
-        lines.append(
-            f"  {b}{_BL}{_H}[/][{rose}]{_DOT}[/]"
-            f"{b}{_H * (w - 4)}[/]"
-            f"[{rose}]{_DOT}[/]{b}{_H}{_BR}[/]"
-        )
+        lines.append(f" {b}{_TL}{_H * w}{_TR}[/]")
+        lines.append(f" {b}{_V}[/] {bar} [{white}]{progress_pct}%[/]")
+        lines.append(f" {b}{_BL}{_H * w}{_BR}[/]")
 
     return "\n".join(lines)

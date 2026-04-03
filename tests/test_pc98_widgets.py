@@ -23,7 +23,7 @@ class TestFormatStatusText:
             interval=60, simulate=False, frame=0,
         )
         assert "STATUS" in result
-        assert "Display + System" in result
+        assert "Disp+Sys" in result
         assert "01:01:01" in result
         assert "Indefinite" in result
 

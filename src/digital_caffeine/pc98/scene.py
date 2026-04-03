@@ -29,8 +29,17 @@ from digital_caffeine.pc98.sprites import (
 _SURFACE_Y_TOP = _CUP_TOP + 2
 _SURFACE_Y_BOT = _CUP_TOP + 5
 
-# Colors that steam can draw over
-_STEAM_BG = frozenset({0, 1, 11, 12})  # BLACK, DEEP_NAVY, STEEL_BLUE, SLATE
+# Colors that steam can draw over (anything that's not the cup, table, or pillars)
+_STEAM_BG = frozenset({
+    0,   # BLACK (background)
+    1,   # DEEP_NAVY (background)
+    8,   # DEEP_RED (curtains)
+    9,   # MAGENTA (curtains)
+    11,  # STEEL_BLUE (window pane)
+    12,  # SLATE (ambient highlights)
+    13,  # WARM_GRAY (window frame)
+    14,  # LIGHT_GRAY (window frame highlight)
+})
 
 
 class CoffeeScene:
