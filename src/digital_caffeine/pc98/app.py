@@ -153,17 +153,18 @@ class PC98App(App):
         self.query_one("#title-bar").display = False
         self.query_one("#main-area").display = False
         self.query_one("#dialogue-area").display = False
-        self.set_timer(1.5, self._dismiss_title)
+        self.set_timer(1.5, self.dismiss_title)
 
-    def _dismiss_title(self) -> None:
+    def dismiss_title(self) -> None:
+        """Hide title card and show main UI."""
         self.query_one("#title-screen").display = False
         self.query_one("#title-bar").display = True
         self.query_one("#main-area").display = True
         self.query_one("#dialogue-area").display = True
         self._title_done = True
-        self.set_interval(1.0 / _FPS, self._animate)
+        self.set_interval(1.0 / _FPS, self.animate_frame)
 
-    def _animate(self) -> None:
+    def animate_frame(self) -> None:
         self._frame += 1
         elapsed = int(time.monotonic() - self._start_time)
         paused = self._engine.is_paused
