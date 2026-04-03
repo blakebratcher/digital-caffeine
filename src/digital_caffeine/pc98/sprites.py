@@ -29,18 +29,18 @@ from digital_caffeine.pc98.palette import (
 )
 
 # Scene dimensions - larger for denser pixel art
-SCENE_W = 80
-SCENE_H = 96
+SCENE_W = 56
+SCENE_H = 68
 
 # -- Layout constants ---------------------------------------------------------
 
-_PILLAR_W = 6
+_PILLAR_W = 4
 
 # Cup body - centered between pillars
-_CUP_LEFT = 21
-_CUP_RIGHT = 58
-_CUP_TOP = 34
-_CUP_BOTTOM = 72
+_CUP_LEFT = 14
+_CUP_RIGHT = 41
+_CUP_TOP = 24
+_CUP_BOTTOM = 51
 _CUP_WALL = 2
 
 # Cup interior
@@ -50,36 +50,36 @@ _INT_TOP = _CUP_TOP + 3
 
 # Coffee fill layers
 _CREMA_TOP = _INT_TOP
-_CREMA_BOT = _INT_TOP + 4
+_CREMA_BOT = _INT_TOP + 3
 _LIGHT_TOP = _CREMA_BOT
-_LIGHT_BOT = _LIGHT_TOP + 6
+_LIGHT_BOT = _LIGHT_TOP + 4
 _MED_TOP = _LIGHT_BOT
-_MED_BOT = _MED_TOP + 8
+_MED_BOT = _MED_TOP + 5
 _DARK_TOP = _MED_BOT
-_DARK_BOT = _DARK_TOP + 8
+_DARK_BOT = _DARK_TOP + 5
 _DEEP_TOP = _DARK_BOT
 _DEEP_BOT = _CUP_BOTTOM - _CUP_WALL
 
 # Handle
 _HDL_LEFT = _CUP_RIGHT + 1
-_HDL_RIGHT = _CUP_RIGHT + 9
-_HDL_TOP = _CUP_TOP + 7
-_HDL_BOT = _CUP_BOTTOM - 8
+_HDL_RIGHT = _CUP_RIGHT + 7
+_HDL_TOP = _CUP_TOP + 5
+_HDL_BOT = _CUP_BOTTOM - 6
 
 # Saucer
-_SAU_LEFT = 15
-_SAU_RIGHT = 64
-_SAU_TOP = 73
-_SAU_BOT = 78
+_SAU_LEFT = 10
+_SAU_RIGHT = 45
+_SAU_TOP = 52
+_SAU_BOT = 55
 
 # Table
-_TABLE_TOP = 78
+_TABLE_TOP = 56
 
 # Window
-_WIN_LEFT = _PILLAR_W + 6
-_WIN_RIGHT = SCENE_W - _PILLAR_W - 6
-_WIN_TOP = 3
-_WIN_BOT = 28
+_WIN_LEFT = _PILLAR_W + 4
+_WIN_RIGHT = SCENE_W - _PILLAR_W - 4
+_WIN_TOP = 2
+_WIN_BOT = 20
 
 
 def draw_background(img: Image.Image) -> None:
