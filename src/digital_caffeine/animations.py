@@ -274,6 +274,51 @@ def get_cup_art(frame: int, *, paused: bool) -> str:
     return "\n".join(lines)
 
 
+# -- Coffee drip particles -------------------------------------------------
+
+# Drip spawn columns (within cup walls, columns 6-16 in art space)
+_DRIP_COLS = list(range(6, 17))
+_DRIP_COLORS = ["#B8520A", "#A0460E", "#8B4513"]
+
+
+def get_drip_particles(frame: int) -> list[tuple[int, int, str, str]]:
+    """Return active drip particles as (row_offset, col, char, color) tuples.
+
+    Drips spawn deterministically based on frame number. Each drip falls
+    1-2 rows over 6-10 frames. Max 2 active at once. row_offset is
+    relative to just below the cup (0 = first row under saucer).
+
+    Returns a list of (row_offset, col, character, color) tuples.
+    """
+    drips: list[tuple[int, int, str, str]] = []
+
+    # Check recent spawn windows for active drips
+    # Spawn window: one potential drip every ~60 frames (~2.5s at 24 FPS)
+    spawn_interval = 60
+    lifespan = 8  # frames a drip lives
+
+    for window in range(3):  # check last 3 spawn windows
+        spawn_frame = ((frame // spawn_interval) - window) * spawn_interval
+        if spawn_frame < 0:
+            continue
+
+        # Deterministic spawn decision
+        seed = spawn_frame * 31 + 17
+        if seed % 5 < 2:  # ~40% chance per window
+            age = frame - spawn_frame
+            if 0 <= age < lifespan:
+                col = _DRIP_COLS[seed % len(_DRIP_COLS)]
+                row = age // 3  # fall 1 row every 3 frames
+                ci = min(age // 3, len(_DRIP_COLORS) - 1)
+                char = "'" if age < lifespan // 2 else "."
+                drips.append((row, col, char, _DRIP_COLORS[ci]))
+
+        if len(drips) >= 2:
+            break
+
+    return drips[:2]
+
+
 # -- Smooth HSV rainbow border (72-step hue rotation) ----------------------
 
 

@@ -16,6 +16,7 @@ from digital_caffeine.animations import (
     build_animated_display,
     get_border_color,
     get_cup_art,
+    get_drip_particles,
     get_quip,
     get_steam_frame,
 )
@@ -133,6 +134,28 @@ def test_get_quip_paused_returns_paused_quip() -> None:
     assert get_quip(frame=99, paused=True) == PAUSED_QUIP
 
 
+# -- Drip particle tests --
+
+
+def test_get_drip_particles_returns_list() -> None:
+    drips = get_drip_particles(frame=0)
+    assert isinstance(drips, list)
+
+
+def test_get_drip_particles_max_two() -> None:
+    # Check across many frames that we never exceed 2 active drips
+    for f in range(500):
+        drips = get_drip_particles(frame=f)
+        assert len(drips) <= 2
+
+
+def test_get_drip_particles_deterministic() -> None:
+    """Same frame number always produces the same drips."""
+    a = get_drip_particles(frame=100)
+    b = get_drip_particles(frame=100)
+    assert a == b
+
+
 # -- build_animated_display tests --
 
 
@@ -241,3 +264,18 @@ def test_build_animated_display_quip_rotates() -> None:
     console_8.print(panel_8)
 
     assert buf_0.getvalue() != buf_8.getvalue()
+
+
+def test_build_animated_display_renders_without_error_at_many_frames() -> None:
+    """Verify display assembly works at various frame counts without crashing."""
+    for f in [0, 1, 24, 48, 100, 288, 500]:
+        panel = build_animated_display(
+            frame=f,
+            mode=Mode.DISPLAY_AND_SYSTEM,
+            uptime_seconds=f // FPS,
+            duration_seconds=None,
+            interval=60,
+            paused=False,
+            simulate=False,
+        )
+        assert isinstance(panel, Panel)
