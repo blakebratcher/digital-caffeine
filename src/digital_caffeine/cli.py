@@ -93,20 +93,11 @@ def build_display(
 
 
 def _can_use_pc98() -> bool:
-    """Check if the terminal supports the PC-98 Textual display.
-
-    Textual handles its own color detection, so we only gate on terminal
-    size and that Rich detects at least some color support (not a dumb pipe).
-    """
+    """Check if the terminal supports the PC-98 Textual display."""
     try:
-        import shutil
-        cols, rows = shutil.get_terminal_size()
-        if cols < 80 or rows < 40:
-            return False
-        if console.color_system is None:
-            return False
+        from digital_caffeine.pc98 import PC98App  # noqa: F401
         return True
-    except Exception:
+    except ImportError:
         return False
 
 
@@ -249,16 +240,25 @@ def start(
 
     try:
         if _can_use_pc98():
-            from digital_caffeine.pc98 import PC98App
+            try:
+                from digital_caffeine.pc98 import PC98App
 
-            app = PC98App(
-                engine=engine,
-                mode=mode,
-                duration_seconds=duration_seconds,
-                interval=interval,
-                simulate=simulate,
-            )
-            app.run()
+                app = PC98App(
+                    engine=engine,
+                    mode=mode,
+                    duration_seconds=duration_seconds,
+                    interval=interval,
+                    simulate=simulate,
+                )
+                app.run()
+            except Exception:
+                # Textual failed - fall back to Rich display
+                _run_rich_display(
+                    engine=engine, mode=mode,
+                    duration_seconds=duration_seconds,
+                    interval=interval, simulate=simulate,
+                    start_time=start_time,
+                )
         else:
             _run_rich_display(
                 engine=engine, mode=mode,
