@@ -580,8 +580,8 @@ def build_animated_display(
 ) -> Panel:
     """Build an animated Rich Panel showing keep-awake status with coffee art.
 
-    Status fields are vertically centered beside the cup art. A progress
-    bar appears when a duration is set.
+    Status fields are vertically centered beside the cup art. Drip particles
+    render below the saucer. A progress bar appears when a duration is set.
     """
     steam = get_steam_frame(frame, paused=paused)
     cup = get_cup_art(frame, paused=paused)
@@ -602,7 +602,31 @@ def build_animated_display(
 
     steam_lines = steam.split("\n")
     cup_lines = cup.split("\n")
-    art_lines = steam_lines + cup_lines
+
+    # Drip particle rows (below saucer)
+    drip_lines: list[str] = []
+    if not paused:
+        drips = get_drip_particles(frame)
+        if drips:
+            # 2 rows of drip space
+            drip_grid = [[" "] * _STEAM_WIDTH for _ in range(2)]
+            drip_color_grid: list[list[str | None]] = [[None] * _STEAM_WIDTH for _ in range(2)]
+            for row_off, col, char, color in drips:
+                if 0 <= row_off < 2 and 0 <= col < _STEAM_WIDTH:
+                    drip_grid[row_off][col] = char
+                    drip_color_grid[row_off][col] = color
+            for y in range(2):
+                line = ""
+                for x in range(_STEAM_WIDTH):
+                    c = drip_grid[y][x]
+                    col = drip_color_grid[y][x]
+                    if c != " " and col:
+                        line += f"[{col}]{c}[/]"
+                    else:
+                        line += c
+                drip_lines.append(line)
+
+    art_lines = steam_lines + cup_lines + drip_lines
 
     status_fields = [
         f"Status:         {status_str}",
@@ -623,7 +647,7 @@ def build_animated_display(
     status_offset = (len(art_lines) - len(status_fields)) // 2
     status_offset = max(0, status_offset)
 
-    art_width = 26
+    art_width = 28
     combined_lines: list[str] = []
     total_rows = max(len(art_lines), len(status_fields) + status_offset)
     for i in range(total_rows):
