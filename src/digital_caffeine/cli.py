@@ -92,6 +92,57 @@ def build_display(
     )
 
 
+def _can_use_pc98() -> bool:
+    """Check if the terminal supports the PC-98 Textual display."""
+    try:
+        import shutil
+        cols, rows = shutil.get_terminal_size()
+        if cols < 80 or rows < 30:
+            return False
+        if console.color_system != "truecolor":
+            return False
+        return True
+    except Exception:
+        return False
+
+
+def _run_rich_display(
+    *,
+    engine: object,
+    mode: Mode,
+    duration_seconds: int | None,
+    interval: int,
+    simulate: bool,
+    start_time: float,
+) -> None:
+    """Run the original Rich Live display as a fallback."""
+    console.print(
+        f"[green]Digital Caffeine started[/green] - mode={MODE_DISPLAY[mode]}, interval={interval}s"
+    )
+    frame = 0
+    with Live(
+        build_display(
+            frame=0, mode=mode, uptime_seconds=0,
+            duration_seconds=duration_seconds, interval=interval,
+            paused=False, simulate=simulate,
+        ),
+        console=console, refresh_per_second=FPS, transient=False,
+    ) as live:
+        while True:
+            elapsed = int(time.monotonic() - start_time)
+            if duration_seconds is not None and elapsed >= duration_seconds:
+                break
+            live.update(
+                build_display(
+                    frame=frame, mode=mode, uptime_seconds=elapsed,
+                    duration_seconds=duration_seconds, interval=interval,
+                    paused=False, simulate=simulate,
+                )
+            )
+            frame += 1
+            time.sleep(1 / FPS)
+
+
 @click.group()
 def cli() -> None:
     """Digital Caffeine - Keep your Windows machine awake.
@@ -191,46 +242,28 @@ def start(
     engine.start()
 
     start_time = time.monotonic()
-    console.print(
-        f"[green]Digital Caffeine started[/green] - mode={MODE_DISPLAY[mode]}, interval={interval}s"
-    )
 
-    frame = 0
+    used_pc98 = False
     try:
-        with Live(
-            build_display(
-                frame=0,
+        if _can_use_pc98():
+            from digital_caffeine.pc98 import PC98App
+
+            app = PC98App(
+                engine=engine,
                 mode=mode,
-                uptime_seconds=0,
                 duration_seconds=duration_seconds,
                 interval=interval,
-                paused=False,
                 simulate=simulate,
-            ),
-            console=console,
-            refresh_per_second=FPS,
-            transient=False,
-        ) as live:
-            while True:
-                elapsed = int(time.monotonic() - start_time)
-
-                # If a duration was set and we've exceeded it, stop automatically
-                if duration_seconds is not None and elapsed >= duration_seconds:
-                    break
-
-                live.update(
-                    build_display(
-                        frame=frame,
-                        mode=mode,
-                        uptime_seconds=elapsed,
-                        duration_seconds=duration_seconds,
-                        interval=interval,
-                        paused=False,
-                        simulate=simulate,
-                    )
-                )
-                frame += 1
-                time.sleep(1 / FPS)
+            )
+            used_pc98 = True
+            app.run()
+        else:
+            _run_rich_display(
+                engine=engine, mode=mode,
+                duration_seconds=duration_seconds,
+                interval=interval, simulate=simulate,
+                start_time=start_time,
+            )
     except KeyboardInterrupt:
         pass
     finally:
