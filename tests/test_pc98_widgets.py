@@ -1,10 +1,10 @@
 """Tests for PC-98 status panel and dialogue box widgets."""
 
-from digital_caffeine.pc98.status import format_status_text
 from digital_caffeine.pc98.dialogue import (
-    typewriter_text,
     get_current_quip,
+    typewriter_text,
 )
+from digital_caffeine.pc98.status import format_status_text
 
 
 class TestFormatStatusText:

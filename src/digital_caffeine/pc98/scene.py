@@ -5,12 +5,20 @@ from __future__ import annotations
 from rich.text import Text
 
 from digital_caffeine.pc98.canvas import PixelCanvas
-from digital_caffeine.pc98.palette import CyclePalette, AMBER, GOLD, CREAM
-from digital_caffeine.pc98.particles import SteamSystem, DripSystem
+from digital_caffeine.pc98.palette import AMBER, CREAM, GOLD, CyclePalette
+from digital_caffeine.pc98.particles import DripSystem, SteamSystem
 from digital_caffeine.pc98.sprites import (
-    SCENE_W, SCENE_H,
-    draw_background, draw_table, draw_cup, draw_handle, draw_saucer,
-    _CUP_TOP, _INT_LEFT, _INT_RIGHT, _CUP_BOTTOM,
+    _CUP_BOTTOM,
+    _CUP_TOP,
+    _INT_LEFT,
+    _INT_RIGHT,
+    SCENE_H,
+    SCENE_W,
+    draw_background,
+    draw_cup,
+    draw_handle,
+    draw_saucer,
+    draw_table,
 )
 
 _SURFACE_Y_TOP = _CUP_TOP + 2

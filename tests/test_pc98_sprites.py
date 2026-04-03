@@ -2,15 +2,15 @@
 
 from PIL import Image
 
-from digital_caffeine.pc98.palette import PALETTE_RGB, BLACK, DEEP_NAVY, WARM_GRAY
+from digital_caffeine.pc98.palette import BLACK, DEEP_NAVY, PALETTE_RGB, WARM_GRAY
 from digital_caffeine.pc98.sprites import (
-    SCENE_W,
     SCENE_H,
+    SCENE_W,
     draw_background,
-    draw_table,
     draw_cup,
-    draw_saucer,
     draw_handle,
+    draw_saucer,
+    draw_table,
 )
 
 
@@ -102,7 +102,7 @@ class TestDrawSaucer:
         draw_background(img)
         draw_saucer(img)
         px = img.load()
-        from digital_caffeine.pc98.palette import SLATE, LIGHT_GRAY
+        from digital_caffeine.pc98.palette import LIGHT_GRAY, SLATE
         saucer_colors = {SLATE, LIGHT_GRAY}
         assert px[14, 60] in saucer_colors
 

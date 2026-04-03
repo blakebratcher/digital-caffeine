@@ -6,7 +6,7 @@ from PIL import Image
 from rich.style import Style
 from rich.text import Text
 
-from digital_caffeine.pc98.palette import CyclePalette, PALETTE_RGB
+from digital_caffeine.pc98.palette import PALETTE_RGB, CyclePalette
 
 _UPPER_HALF = "\u2580"
 _FULL_BLOCK = "\u2588"

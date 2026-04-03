@@ -9,8 +9,17 @@ from __future__ import annotations
 from PIL import Image, ImageDraw
 
 from digital_caffeine.pc98.palette import (
-    BLACK, DEEP_NAVY, DARK_BROWN, WARM_BROWN, CHOCOLATE, AMBER,
-    GOLD, CREAM, SLATE, WARM_GRAY, LIGHT_GRAY, OFF_WHITE,
+    AMBER,
+    BLACK,
+    CHOCOLATE,
+    CREAM,
+    DARK_BROWN,
+    DEEP_NAVY,
+    LIGHT_GRAY,
+    OFF_WHITE,
+    SLATE,
+    WARM_BROWN,
+    WARM_GRAY,
     dither_pick,
 )
 

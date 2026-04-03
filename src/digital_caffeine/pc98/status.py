@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from digital_caffeine.pc98.palette import PALETTE, GOLD, STEEL_BLUE, OFF_WHITE
+from digital_caffeine.pc98.palette import GOLD, OFF_WHITE, PALETTE, STEEL_BLUE
 
 
 def _format_time(seconds: int) -> str:

@@ -1,8 +1,7 @@
 """Tests for steam and drip particle systems."""
 
-import math
 
-from digital_caffeine.pc98.particles import SteamSystem, DripSystem
+from digital_caffeine.pc98.particles import DripSystem, SteamSystem
 
 
 class TestSteamSystem:
@@ -12,7 +11,6 @@ class TestSteamSystem:
 
     def test_particles_rise_over_time(self):
         steam = SteamSystem(count=4, spawn_y=50.0, x_center=32)
-        initial_ys = [p.y for p in steam.particles]
         for _ in range(10):
             steam.update()
         for i, p in enumerate(steam.particles):
@@ -75,13 +73,11 @@ class TestDripSystem:
     def test_drips_expire(self):
         drips = DripSystem(spawn_y=58, x_min=19, x_max=44)
         had_drip = False
-        drip_gone = False
         for _ in range(500):
             drips.update()
             draws = drips.get_draw_list()
             if draws:
                 had_drip = True
             elif had_drip:
-                drip_gone = True
                 break
         assert had_drip

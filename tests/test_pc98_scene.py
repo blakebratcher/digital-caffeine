@@ -3,7 +3,7 @@
 from rich.text import Text
 
 from digital_caffeine.pc98.scene import CoffeeScene
-from digital_caffeine.pc98.sprites import SCENE_W, SCENE_H
+from digital_caffeine.pc98.sprites import SCENE_H, SCENE_W
 
 
 class TestCoffeeScene:
@@ -42,7 +42,7 @@ class TestCoffeeScene:
     def test_animated_surface_changes(self):
         scene = CoffeeScene()
         scene.update()
-        r1 = scene.render()
+        scene.render()
         for _ in range(20):
             scene.update()
         r2 = scene.render()

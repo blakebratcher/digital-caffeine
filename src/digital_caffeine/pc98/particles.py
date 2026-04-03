@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from digital_caffeine.pc98.palette import CREAM, WARM_GRAY, DEEP_NAVY, CHOCOLATE, WARM_BROWN
+from digital_caffeine.pc98.palette import CHOCOLATE, CREAM, DEEP_NAVY, WARM_BROWN, WARM_GRAY
 
 
 @dataclass
@@ -55,7 +55,8 @@ class SteamSystem:
         self.frame += 1
         for p in self.particles:
             p.y -= p.speed
-            p.x = self.x_center + math.sin(self.frame * p.frequency + p.phase) * p.amplitude + (p.phase % 5 - 2) * 2
+            drift = math.sin(self.frame * p.frequency + p.phase) * p.amplitude
+            p.x = self.x_center + drift + (p.phase % 5 - 2) * 2
             p.age += 1
             if p.age >= self._max_age or p.y < -2:
                 p.x = self.x_center + (p.phase % 5 - 2) * 3.0

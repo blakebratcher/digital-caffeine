@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from digital_caffeine.animations import QUIPS, PAUSED_QUIP
-from digital_caffeine.pc98.palette import PALETTE, GOLD, OFF_WHITE
+from digital_caffeine.animations import PAUSED_QUIP, QUIPS
+from digital_caffeine.pc98.palette import GOLD, OFF_WHITE, PALETTE
 
 FPS = 24
 _QUIP_INTERVAL = 12

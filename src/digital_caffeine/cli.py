@@ -243,7 +243,6 @@ def start(
 
     start_time = time.monotonic()
 
-    used_pc98 = False
     try:
         if _can_use_pc98():
             from digital_caffeine.pc98 import PC98App
@@ -255,7 +254,6 @@ def start(
                 interval=interval,
                 simulate=simulate,
             )
-            used_pc98 = True
             app.run()
         else:
             _run_rich_display(

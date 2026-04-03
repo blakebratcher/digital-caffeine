@@ -6,14 +6,14 @@ import time
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal
 from textual.widgets import Static
 
 from digital_caffeine.animations import MODE_DISPLAY, format_time
 from digital_caffeine.constants import Mode
 from digital_caffeine.engine import CaffeineEngine
 from digital_caffeine.pc98.dialogue import format_dialogue_box
-from digital_caffeine.pc98.palette import PALETTE, STEEL_BLUE, DEEP_NAVY, GOLD
+from digital_caffeine.pc98.palette import DEEP_NAVY, GOLD, PALETTE, STEEL_BLUE
 from digital_caffeine.pc98.scene import CoffeeScene
 from digital_caffeine.pc98.status import format_status_text
 
@@ -135,7 +135,7 @@ class PC98App(App):
 
     def compose(self) -> ComposeResult:
         yield TitleWidget(
-            f"\n\n[bold]DIGITAL CAFFEINE[/bold]\n\n[dim]PC-98 ver.[/dim]",
+            "\n\n[bold]DIGITAL CAFFEINE[/bold]\n\n[dim]PC-98 ver.[/dim]",
             id="title-screen",
         )
         yield Static(
