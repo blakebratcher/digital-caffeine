@@ -181,24 +181,39 @@ def get_cup_art(frame: int, *, paused: bool) -> str:
     return "\n".join(lines)
 
 
-# -- Smooth RGB border breathing (32-step sine interpolation) ----------------
+# -- Smooth HSV rainbow border (72-step hue rotation) ----------------------
 
 
-def _generate_border_colors(steps: int = 32) -> list[str]:
-    """Generate a smooth breathing cycle between dark and bright cyan.
+def _hsv_to_hex(h: float, s: float, v: float) -> str:
+    """Convert HSV (h: 0-360, s: 0-1, v: 0-1) to a hex color string."""
+    c = v * s
+    x = c * (1 - abs((h / 60) % 2 - 1))
+    m = v - c
+    if h < 60:
+        r, g, b = c, x, 0.0
+    elif h < 120:
+        r, g, b = x, c, 0.0
+    elif h < 180:
+        r, g, b = 0.0, c, x
+    elif h < 240:
+        r, g, b = 0.0, x, c
+    elif h < 300:
+        r, g, b = x, 0.0, c
+    else:
+        r, g, b = c, 0.0, x
+    ri = int((r + m) * 255)
+    gi = int((g + m) * 255)
+    bi = int((b + m) * 255)
+    return f"#{ri:02x}{gi:02x}{bi:02x}"
 
-    Uses sine interpolation for organic-feeling brightness changes.
-    No visible stepping between adjacent colors.
+
+def _generate_border_colors(steps: int = 72) -> list[str]:
+    """Generate a full HSV hue rotation at constant saturation and brightness.
+
+    72 steps at S=0.7, V=0.85 for rich but not neon colors.
+    Full rotation in ~6 seconds (advance every 2 frames at 24 FPS).
     """
-    colors = []
-    for i in range(steps):
-        # Sine wave starting at minimum, peaking at steps/4
-        t = (math.sin(i / steps * 2 * math.pi - math.pi / 2) + 1) / 2
-        # Dark: #005555, Bright: #00DDDD
-        g = int(85 + t * 136)
-        b = int(85 + t * 136)
-        colors.append(f"#00{g:02x}{b:02x}")
-    return colors
+    return [_hsv_to_hex(i * 360 / steps, 0.7, 0.85) for i in range(steps)]
 
 
 BORDER_COLORS: list[str] = _generate_border_colors()
@@ -207,12 +222,11 @@ BORDER_COLORS: list[str] = _generate_border_colors()
 def get_border_color(frame: int, *, paused: bool) -> str:
     """Return the border color for the current frame.
 
-    Advances every frame for buttery smooth breathing.
-    32 hex colors over 4 seconds at 8fps.
+    Advances every 2 frames for a full rainbow rotation in ~6 seconds.
     """
     if paused:
         return "yellow"
-    return BORDER_COLORS[frame % len(BORDER_COLORS)]
+    return BORDER_COLORS[(frame // 2) % len(BORDER_COLORS)]
 
 
 # -- Quips with typewriter effect --------------------------------------------

@@ -75,14 +75,15 @@ def test_get_cup_art_surface_animates() -> None:
 
 
 def test_border_colors_has_smooth_steps() -> None:
-    assert len(BORDER_COLORS) == 32
+    assert len(BORDER_COLORS) == 72
     assert all(c.startswith("#") for c in BORDER_COLORS)
 
 
 def test_get_border_color_cycles() -> None:
-    colors = [get_border_color(frame=i, paused=False) for i in range(32)]
+    # Border advances every 2 frames
+    colors = [get_border_color(frame=i * 2, paused=False) for i in range(72)]
     assert colors == BORDER_COLORS
-    assert get_border_color(frame=32, paused=False) == BORDER_COLORS[0]
+    assert get_border_color(frame=144, paused=False) == BORDER_COLORS[0]
 
 
 def test_get_border_color_paused_returns_yellow() -> None:
@@ -182,6 +183,7 @@ def test_build_animated_display_paused_state() -> None:
 
 
 def test_build_animated_display_border_color_changes() -> None:
+    # Border advances every 2 frames, so use frames 0 and 2 to get different colors
     panel_0 = build_animated_display(
         frame=0,
         mode=Mode.DISPLAY_AND_SYSTEM,
@@ -191,8 +193,8 @@ def test_build_animated_display_border_color_changes() -> None:
         paused=False,
         simulate=False,
     )
-    panel_1 = build_animated_display(
-        frame=1,
+    panel_2 = build_animated_display(
+        frame=2,
         mode=Mode.DISPLAY_AND_SYSTEM,
         uptime_seconds=0,
         duration_seconds=None,
@@ -200,7 +202,7 @@ def test_build_animated_display_border_color_changes() -> None:
         paused=False,
         simulate=False,
     )
-    assert panel_0.border_style != panel_1.border_style
+    assert panel_0.border_style != panel_2.border_style
 
 
 def test_build_animated_display_quip_rotates() -> None:
