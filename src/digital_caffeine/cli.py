@@ -93,13 +93,17 @@ def build_display(
 
 
 def _can_use_pc98() -> bool:
-    """Check if the terminal supports the PC-98 Textual display."""
+    """Check if the terminal supports the PC-98 Textual display.
+
+    Textual handles its own color detection, so we only gate on terminal
+    size and that Rich detects at least some color support (not a dumb pipe).
+    """
     try:
         import shutil
         cols, rows = shutil.get_terminal_size()
         if cols < 80 or rows < 40:
             return False
-        if console.color_system != "truecolor":
+        if console.color_system is None:
             return False
         return True
     except Exception:
