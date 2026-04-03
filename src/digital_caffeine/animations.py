@@ -12,7 +12,7 @@ from digital_caffeine.constants import Mode
 
 # -- Configuration -----------------------------------------------------------
 
-FPS = 8
+FPS = 24
 
 # -- Markup-aware layout helpers ---------------------------------------------
 
@@ -332,7 +332,7 @@ _ALL_QUIPS: list[str] = [
     "Time is an illusion. Uptime doubly so.",
     "Your PC has transcended the sleep-wake cycle",
     # -- self-referential --
-    "This animation runs at 8fps. You're welcome.",
+    "This animation runs at 24fps. You're welcome.",
     "Handcrafted artisan wakefulness",
     "Small program, big dreams",
     "Still here. Still awake. Still caffeinated.",
@@ -359,15 +359,15 @@ QUIPS: list[str] = _shuffle_quips()
 
 PAUSED_QUIP: str = "Gone cold... resume to reheat"
 
-_QUIP_INTERVAL = 8  # seconds per quip
+_QUIP_INTERVAL = 12  # seconds per quip
 
 
 def get_quip(frame: int, *, paused: bool) -> str:
     """Return the current quip with a typewriter reveal effect.
 
-    Characters appear two at a time with a blinking cursor while
-    typing. Once fully revealed, the cursor disappears. Quip order
-    is shuffled per-session so each launch shows a different sequence.
+    Characters appear one at a time every 3 frames (~8 chars/sec at 24 FPS)
+    with a blinking cursor while typing. Once fully revealed, the cursor
+    disappears. Quip order is shuffled per-session.
     """
     if paused:
         return PAUSED_QUIP
@@ -376,10 +376,11 @@ def get_quip(frame: int, *, paused: bool) -> str:
     quip = QUIPS[quip_idx]
 
     frame_in_quip = frame % frames_per_quip
-    chars_to_show = min(len(quip), (frame_in_quip + 1) * 2)
+    # 1 character every 3 frames = ~8 chars/sec at 24 FPS
+    chars_to_show = min(len(quip), (frame_in_quip // 3) + 1)
 
     if chars_to_show < len(quip):
-        cursor = "\u2588" if (frame % 6) < 3 else " "
+        cursor = "\u2588" if (frame % 18) < 9 else " "
         return quip[:chars_to_show] + cursor
     return quip
 

@@ -98,25 +98,22 @@ def test_quips_has_many_entries() -> None:
 
 
 def test_get_quip_rotates() -> None:
-    frames_per_quip = 8 * FPS
-    # Compare fully-typed quips at end of consecutive windows
+    frames_per_quip = 12 * FPS  # 12 seconds per quip at 24 FPS
     quip_a = get_quip(frame=frames_per_quip - 1, paused=False)
     quip_b = get_quip(frame=2 * frames_per_quip - 1, paused=False)
     assert quip_a != quip_b
 
 
 def test_get_quip_typewriter_effect() -> None:
-    # Frame 0 should show partial text with cursor
     partial = get_quip(frame=0, paused=False)
-    full = get_quip(frame=8 * FPS - 1, paused=False)
+    full = get_quip(frame=12 * FPS - 1, paused=False)
     assert len(partial) < len(full)
-    assert full.startswith(partial[:2])
+    assert full.startswith(partial[:1])
 
 
 def test_get_quip_wraps_around() -> None:
-    cycle_length = len(QUIPS) * 8 * FPS
-    # Compare at same typing stage (fully typed)
-    end = 8 * FPS - 1
+    cycle_length = len(QUIPS) * 12 * FPS
+    end = 12 * FPS - 1
     assert get_quip(frame=end, paused=False) == get_quip(
         frame=cycle_length + end, paused=False
     )
@@ -223,9 +220,9 @@ def test_build_animated_display_quip_rotates() -> None:
     buf_8 = StringIO()
     console_8 = Console(file=buf_8, force_terminal=True, width=90)
     panel_8 = build_animated_display(
-        frame=8 * FPS,
+        frame=12 * FPS,
         mode=Mode.DISPLAY_AND_SYSTEM,
-        uptime_seconds=8,
+        uptime_seconds=12,
         duration_seconds=None,
         interval=60,
         paused=False,
