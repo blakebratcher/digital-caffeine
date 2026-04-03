@@ -152,13 +152,38 @@ def get_steam_frame(frame: int, *, paused: bool) -> str:
     """Return the steam art for the current frame.
 
     Warm wisps near the cup cool to gray as they rise. Heat shimmer
-    sparkles in orange/gold near the cup mouth. Steam advances every
-    3 display frames for natural rising speed at 24 FPS.
+    sparkles in orange/gold near the cup mouth. Bottom 2 rows pick up
+    a tint from the current border hue. Steam advances every 3 display
+    frames for natural rising speed at 24 FPS.
     """
     if paused:
         return "\n".join([" " * _STEAM_WIDTH] * _STEAM_HEIGHT)
     sf = (frame // 3) % len(STEAM_FRAMES)
-    return STEAM_FRAMES[sf]
+    base = STEAM_FRAMES[sf]
+
+    # Post-process: tint the bottom 2 rows toward the current border hue
+    border_hex = BORDER_COLORS[(frame // 2) % len(BORDER_COLORS)]
+    lines = base.split("\n")
+    for row_idx in range(_STEAM_HEIGHT - 2, _STEAM_HEIGHT):
+        if row_idx < len(lines):
+            # Replace warm wisp colors with a blend toward border hue
+            line = lines[row_idx]
+            for old_color in ("#AA8866", "#886644"):
+                if old_color in line:
+                    # Blend: 50% original warm, 50% border
+                    or_ = int(old_color[1:3], 16)
+                    og = int(old_color[3:5], 16)
+                    ob = int(old_color[5:7], 16)
+                    br = int(border_hex[1:3], 16)
+                    bg = int(border_hex[3:5], 16)
+                    bb = int(border_hex[5:7], 16)
+                    nr = int(or_ * 0.5 + br * 0.5)
+                    ng = int(og * 0.5 + bg * 0.5)
+                    nb = int(ob * 0.5 + bb * 0.5)
+                    blended = f"#{nr:02x}{ng:02x}{nb:02x}"
+                    line = line.replace(old_color, blended)
+            lines[row_idx] = line
+    return "\n".join(lines)
 
 
 # -- Cup art with animated liquid surface, glow, and shimmer ----------------
@@ -228,9 +253,40 @@ _CUP_TOP = "     [white]\u250c" + "\u2500" * 13 + "\u2510[/]    "
 _CUP_BOT = "     [white]\u2514" + "\u2500" * 13 + "\u2518[/]    "
 _CUP_SAUCER = "    [#555555]" + "\u2550" * 19 + "[/]  "
 _CUP_DIM = "[dim]" + "\u2591" * 11 + "[/]"
-_CUP_FILL_1 = "[#B8520A]" + "\u2592" * 11 + "[/]"
-_CUP_FILL_2 = "[#8B4513]" + "\u2593" * 11 + "[/]"
-_CUP_FILL_3 = "[#5C2E0E]" + "\u2593" * 11 + "[/]"
+
+# Coffee fill base colors (top to bottom = light to dark)
+_FILL_COLORS = [
+    ("#B8520A", "#C45E12", "#A84808"),  # row 1: warm orange-brown variants
+    ("#8B4513", "#955020", "#7D3B0E"),  # row 2: medium brown variants
+    ("#5C2E0E", "#6B3610", "#4E260C"),  # row 3: dark brown variants
+]
+_FILL_CHARS = ["\u2591", "\u2592", "\u2593"]  # light, medium, dark block
+
+
+def _animated_fill_row(frame: int, row_idx: int) -> str:
+    """Generate an animated coffee fill row with per-character bubbling.
+
+    Characters flicker between block densities and color variants,
+    creating a subtle simmering effect.
+    """
+    colors = _FILL_COLORS[row_idx]
+    base_char = _FILL_CHARS[1 + (row_idx > 0)]  # ▒ for top, ▓ for mid/bottom
+    result = ""
+    seed = frame * 13 + row_idx * 7
+    for x in range(11):
+        # Deterministic per-character variation
+        h = (seed + x * 37) % 100
+        if h < 12:  # 12% chance of lighter bubble
+            char = _FILL_CHARS[max(0, _FILL_CHARS.index(base_char) - 1)]
+            color = colors[1]
+        elif h < 18:  # 6% chance of darker pocket
+            char = _FILL_CHARS[min(2, _FILL_CHARS.index(base_char) + 1)]
+            color = colors[2]
+        else:
+            char = base_char
+            color = colors[0]
+        result += f"[{color}]{char}[/]"
+    return result
 
 # Pre-cached paused cup (never changes)
 _CUP_PAUSED: str = "\n".join([
@@ -247,9 +303,8 @@ _CUP_PAUSED: str = "\n".join([
 def get_cup_art(frame: int, *, paused: bool) -> str:
     """Return the coffee cup ASCII art for the current frame.
 
-    Active cups show a 4-step brown gradient with an animated liquid
-    ripple that glows between chocolate and gold. Shimmer highlights
-    catch the light. Handle breathes in sync with border cycle.
+    Active cups show animated bubbling coffee with a glowing surface,
+    shimmer highlights, breathing handle, and border-tinted saucer.
     """
     if paused:
         return _CUP_PAUSED
@@ -262,14 +317,31 @@ def get_cup_art(frame: int, *, paused: bool) -> str:
     hv = int(170 + ht * 85)  # #AAAAAA to #FFFFFF
     hcolor = f"#{hv:02x}{hv:02x}{hv:02x}"
 
+    # Animated coffee fill rows (bubbling)
+    fill_1 = _animated_fill_row(frame, 0)
+    fill_2 = _animated_fill_row(frame, 1)
+    fill_3 = _animated_fill_row(frame, 2)
+
+    # Saucer reflects a hint of the border color
+    border_hex = BORDER_COLORS[(frame // 2) % len(BORDER_COLORS)]
+    # Blend border color toward gray (30% border, 70% base gray)
+    br = int(border_hex[1:3], 16)
+    bg = int(border_hex[3:5], 16)
+    bb = int(border_hex[5:7], 16)
+    sr = int(0x55 * 0.7 + br * 0.3)
+    sg = int(0x55 * 0.7 + bg * 0.3)
+    sb = int(0x55 * 0.7 + bb * 0.3)
+    saucer_color = f"#{sr:02x}{sg:02x}{sb:02x}"
+    saucer = f"    [{saucer_color}]" + "\u2550" * 19 + "[/]  "
+
     lines = [
         _CUP_TOP,
         f"     [white]\u2502[/] {surface} [{hcolor}]\u251c\u2500\u2500\u256e[/]",
-        f"     [white]\u2502[/] {_CUP_FILL_1} [{hcolor}]\u2502[/]  [{hcolor}]\u2502[/]",
-        f"     [white]\u2502[/] {_CUP_FILL_2} [{hcolor}]\u2502[/]  [{hcolor}]\u2502[/]",
-        f"     [white]\u2502[/] {_CUP_FILL_3} [{hcolor}]\u251c\u2500\u2500\u256f[/]",
+        f"     [white]\u2502[/] {fill_1} [{hcolor}]\u2502[/]  [{hcolor}]\u2502[/]",
+        f"     [white]\u2502[/] {fill_2} [{hcolor}]\u2502[/]  [{hcolor}]\u2502[/]",
+        f"     [white]\u2502[/] {fill_3} [{hcolor}]\u251c\u2500\u2500\u256f[/]",
         _CUP_BOT,
-        _CUP_SAUCER,
+        saucer,
     ]
     return "\n".join(lines)
 
@@ -541,14 +613,26 @@ def get_quip(frame: int, *, paused: bool) -> str:
 
 
 def _build_progress_bar(
-    elapsed: int, total: int, width: int = 20
+    elapsed: int, total: int, frame: int, width: int = 20
 ) -> str:
-    """Build a visual progress bar for timed sessions."""
+    """Build a rainbow-gradient progress bar for timed sessions.
+
+    Each filled character gets a color from the border palette,
+    offset by frame for an animated shimmer effect.
+    """
     progress = min(1.0, elapsed / max(1, total))
     filled = int(progress * width)
-    bar = "\u2593" * filled + "\u2591" * (width - filled)
     pct = int(progress * 100)
-    return f"[cyan]{bar}[/] [dim]{pct}%[/]"
+
+    bar = ""
+    for i in range(width):
+        if i < filled:
+            # Rainbow gradient across the bar, shifting with frame
+            ci = (i * 3 + frame // 2) % len(BORDER_COLORS)
+            bar += f"[{BORDER_COLORS[ci]}]\u2593[/]"
+        else:
+            bar += "[#333333]\u2591[/]"
+    return f"{bar} [dim]{pct}%[/]"
 
 
 # -- Display assembly --------------------------------------------------------
@@ -640,7 +724,7 @@ def build_animated_display(
     if duration_seconds is not None:
         status_fields.append("")
         status_fields.append(
-            _build_progress_bar(uptime_seconds, duration_seconds)
+            _build_progress_bar(uptime_seconds, duration_seconds, frame)
         )
 
     # Vertically center status beside the art
@@ -664,15 +748,25 @@ def build_animated_display(
             f" [yellow dim italic]{quip}[/yellow dim italic]"
         )
     else:
-        combined_lines.append(f" [dim italic]{quip}[/dim italic]")
+        # Quip text gets a warm tint from the surface glow
+        quip_color = _surface_color(frame)
+        combined_lines.append(f" [{quip_color} italic]{quip}[/]")
 
     combined_lines.append("")
-    combined_lines.append(" [dim]Press Ctrl+C to stop[/dim]")
+    # Breathing footer - opacity pulses via gray value
+    footer_t = (math.sin(frame / FPS * math.pi) + 1) / 2  # ~2s cycle
+    fv = int(60 + footer_t * 50)  # #3C3C3C to #6E6E6E
+    footer_color = f"#{fv:02x}{fv:02x}{fv:02x}"
+    combined_lines.append(f" [{footer_color}]Press Ctrl+C to stop[/]")
 
     content = "\n".join(combined_lines)
+
+    # Title matches the border color
+    title_str = f"[bold {border_color}]:coffee: Digital Caffeine[/]"
+
     return Panel(
         content,
-        title="[bold cyan]:coffee: Digital Caffeine[/bold cyan]",
+        title=title_str,
         border_style=Style(color=border_color),
         padding=(1, 1),
         expand=False,
