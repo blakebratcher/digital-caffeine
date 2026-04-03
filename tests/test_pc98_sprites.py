@@ -2,7 +2,15 @@
 
 from PIL import Image
 
-from digital_caffeine.pc98.palette import BLACK, DEEP_NAVY, PALETTE_RGB, WARM_GRAY
+from digital_caffeine.pc98.palette import (
+    BLACK,
+    DARK_BROWN,
+    DEEP_NAVY,
+    PALETTE_RGB,
+    SLATE,
+    WARM_BROWN,
+    WARM_GRAY,
+)
 from digital_caffeine.pc98.sprites import (
     SCENE_H,
     SCENE_W,
@@ -31,16 +39,20 @@ class TestDrawBackground:
         img = _make_scene()
         draw_background(img)
         px = img.load()
+        # Background is mostly deep navy with sparse star pixels
         for y in range(SCENE_H):
             for x in range(SCENE_W):
-                assert px[x, y] in (BLACK, DEEP_NAVY)
+                assert px[x, y] in (BLACK, DEEP_NAVY, SLATE)
 
-    def test_uses_dither_pattern(self):
+    def test_mostly_deep_navy(self):
         img = _make_scene()
         draw_background(img)
         px = img.load()
-        colors = {px[x, y] for x in range(4) for y in range(4)}
-        assert len(colors) == 2
+        navy_count = sum(
+            1 for y in range(SCENE_H) for x in range(SCENE_W) if px[x, y] == DEEP_NAVY
+        )
+        # Vast majority should be deep navy
+        assert navy_count > (SCENE_W * SCENE_H * 0.9)
 
 
 class TestDrawTable:
@@ -49,7 +61,8 @@ class TestDrawTable:
         draw_background(img)
         draw_table(img)
         px = img.load()
-        assert px[32, SCENE_H - 1] == WARM_GRAY
+        # Table uses warm brown and warm gray bands
+        assert px[32, SCENE_H - 1] in (WARM_GRAY, WARM_BROWN, DARK_BROWN)
 
     def test_table_has_grain_lines(self):
         img = _make_scene()

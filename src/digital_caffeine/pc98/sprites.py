@@ -15,6 +15,7 @@ from digital_caffeine.pc98.palette import (
     CREAM,
     DARK_BROWN,
     DEEP_NAVY,
+    DUSTY_ROSE,
     LIGHT_GRAY,
     OFF_WHITE,
     SLATE,
@@ -70,30 +71,50 @@ _TABLE_TOP = 64
 
 
 def draw_background(img: Image.Image) -> None:
-    """Fill the scene with deep navy + black 2x2 dither pattern."""
+    """Fill the scene with a calm deep navy. Subtle, not flashy."""
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([0, 0, SCENE_W - 1, SCENE_H - 1], fill=DEEP_NAVY)
+    # Sparse twinkling stars - just a few faint pixels in the upper region
     px = img.load()
-    for y in range(SCENE_H):
-        for x in range(SCENE_W):
-            px[x, y] = dither_pick(DEEP_NAVY, BLACK, x, y)
+    star_positions = [
+        (5, 3), (15, 8), (52, 5), (60, 12), (8, 18), (38, 2),
+        (45, 15), (22, 10), (58, 22), (3, 14), (30, 6), (50, 20),
+    ]
+    for sx, sy in star_positions:
+        if 0 <= sx < SCENE_W and 0 <= sy < _CUP_TOP - 3:
+            px[sx, sy] = SLATE  # dim star, not bright
 
 
 def draw_table(img: Image.Image) -> None:
-    """Draw the table surface in the lower portion of the scene."""
+    """Draw the table surface with rich wood grain texture."""
     draw = ImageDraw.Draw(img)
-    draw.rectangle([0, _TABLE_TOP, SCENE_W - 1, SCENE_H - 1], fill=WARM_GRAY)
-    # Wood grain: lighter horizontal lines every 4 pixels
-    for y in range(_TABLE_TOP, SCENE_H, 4):
-        draw.line([(0, y), (SCENE_W - 1, y)], fill=LIGHT_GRAY)
-    # Subtle dithered texture
     px = img.load()
-    for y in range(_TABLE_TOP + 1, SCENE_H):
-        for x in range(SCENE_W):
-            if (x + y) % 7 == 0:
-                px[x, y] = dither_pick(WARM_GRAY, WARM_BROWN, x, y)
+
+    # Base table fill
+    draw.rectangle([0, _TABLE_TOP, SCENE_W - 1, SCENE_H - 1], fill=WARM_BROWN)
+
+    # Wood grain: alternating lighter/darker horizontal bands
+    for y in range(_TABLE_TOP, SCENE_H):
+        band = (y - _TABLE_TOP) // 3
+        if band % 2 == 0:
+            for x in range(SCENE_W):
+                px[x, y] = WARM_GRAY
+        # Lighter grain highlight every 6 rows
+        if (y - _TABLE_TOP) % 6 == 0:
+            draw.line([(0, y), (SCENE_W - 1, y)], fill=LIGHT_GRAY)
+
+    # Subtle knot patterns - small darker circles in the wood
+    for x in range(SCENE_W):
+        for y in range(_TABLE_TOP, SCENE_H):
+            if (x * 7 + y * 13) % 47 == 0:
+                px[x, y] = DARK_BROWN
+
+    # Table edge highlight at the very top
+    draw.line([(0, _TABLE_TOP), (SCENE_W - 1, _TABLE_TOP)], fill=LIGHT_GRAY)
 
 
 def draw_cup(img: Image.Image) -> None:
-    """Draw the coffee cup body with gradient fill layers."""
+    """Draw the coffee cup body with gradient fill layers and PC-98 highlights."""
     draw = ImageDraw.Draw(img)
     px = img.load()
 
@@ -101,17 +122,28 @@ def draw_cup(img: Image.Image) -> None:
     draw.rectangle(
         [_CUP_LEFT, _CUP_TOP, _CUP_RIGHT, _CUP_BOTTOM], outline=BLACK
     )
-    # Cup walls (light gray)
+
+    # Cup walls - left wall lighter (light source from left), right wall darker
+    for y in range(_CUP_TOP + 1, _CUP_BOTTOM):
+        px[_CUP_LEFT + 1, y] = OFF_WHITE  # left wall highlight
+        px[_CUP_RIGHT - 1, y] = LIGHT_GRAY  # right wall shadow
+
+    # Rim - the star of the cup. 3px thick with PC-98 magenta/rose glow
     draw.rectangle(
-        [_CUP_LEFT + 1, _CUP_TOP + 1, _CUP_RIGHT - 1, _CUP_BOTTOM - 1],
-        outline=LIGHT_GRAY,
+        [_CUP_LEFT + 1, _CUP_TOP, _CUP_RIGHT - 1, _CUP_TOP], fill=BLACK
     )
-    # Rim highlight (off-white top 2 rows)
     draw.rectangle(
-        [_CUP_LEFT + 1, _CUP_TOP, _CUP_RIGHT - 1, _CUP_TOP + 1], fill=OFF_WHITE
+        [_CUP_LEFT + 1, _CUP_TOP + 1, _CUP_RIGHT - 1, _CUP_TOP + 1], fill=OFF_WHITE
     )
-    draw.rectangle(
-        [_CUP_LEFT, _CUP_TOP, _CUP_RIGHT, _CUP_TOP], fill=BLACK
+    # PC-98 signature: magenta/rose highlight along the rim
+    for x in range(_CUP_LEFT + 2, _CUP_RIGHT - 1):
+        if x % 3 == 0:
+            px[x, _CUP_TOP + 1] = DUSTY_ROSE
+
+    # Cup bottom inner edge
+    draw.line(
+        [(_CUP_LEFT + 1, _CUP_BOTTOM - 1), (_CUP_RIGHT - 1, _CUP_BOTTOM - 1)],
+        fill=LIGHT_GRAY,
     )
 
     # Coffee fill layers with ordered dithering at boundaries
@@ -121,7 +153,7 @@ def draw_cup(img: Image.Image) -> None:
     _fill_layer(px, _DARK_TOP, _DARK_BOT, DARK_BROWN, WARM_BROWN)
     _fill_layer(px, _DEEP_TOP, _DEEP_BOT, DARK_BROWN, DARK_BROWN)
 
-    # Dithered boundaries between layers (1px transition rows)
+    # Dithered transitions between layers
     for x in range(_INT_LEFT, _INT_RIGHT + 1):
         if _CREMA_BOT < SCENE_H:
             px[x, _CREMA_BOT] = dither_pick(AMBER, CHOCOLATE, x, _CREMA_BOT)
@@ -131,6 +163,11 @@ def draw_cup(img: Image.Image) -> None:
             px[x, _MED_BOT] = dither_pick(WARM_BROWN, DARK_BROWN, x, _MED_BOT)
         if _DARK_BOT < SCENE_H:
             px[x, _DARK_BOT] = dither_pick(DARK_BROWN, DARK_BROWN, x, _DARK_BOT)
+
+    # Specular highlight on the left wall of the coffee (light catching the rim)
+    for y in range(_CREMA_TOP, min(_CREMA_TOP + 2, _CREMA_BOT)):
+        px[_INT_LEFT, y] = OFF_WHITE
+        px[_INT_LEFT + 1, y] = AMBER
 
 
 def _fill_layer(
@@ -150,8 +187,10 @@ def _fill_layer(
 
 
 def draw_handle(img: Image.Image) -> None:
-    """Draw the cup handle to the right of the cup body."""
+    """Draw the cup handle with PC-98 style shading."""
     draw = ImageDraw.Draw(img)
+    px = img.load()
+
     # Outline
     draw.rectangle([_HDL_LEFT, _HDL_TOP, _HDL_RIGHT, _HDL_BOT], outline=BLACK)
     # Fill
@@ -159,12 +198,16 @@ def draw_handle(img: Image.Image) -> None:
         [_HDL_LEFT + 1, _HDL_TOP + 1, _HDL_RIGHT - 1, _HDL_BOT - 1],
         fill=WARM_GRAY,
     )
-    # Highlight on top edge
+    # Top edge highlight
     draw.line(
         [(_HDL_LEFT + 1, _HDL_TOP + 1), (_HDL_RIGHT - 1, _HDL_TOP + 1)],
         fill=OFF_WHITE,
     )
-    # Hollow interior (cut out the middle to make it a handle shape)
+    # Left edge highlight (connects to cup)
+    for y in range(_HDL_TOP + 1, _HDL_BOT):
+        px[_HDL_LEFT + 1, y] = LIGHT_GRAY
+
+    # Hollow interior
     inner_left = _HDL_LEFT + 3
     inner_right = _HDL_RIGHT - 2
     inner_top = _HDL_TOP + 3
@@ -179,13 +222,29 @@ def draw_handle(img: Image.Image) -> None:
 
 
 def draw_saucer(img: Image.Image) -> None:
-    """Draw the saucer below the cup."""
+    """Draw the saucer with highlight, shadow, and reflection."""
     draw = ImageDraw.Draw(img)
+    px = img.load()
+
+    # Main saucer body
     draw.rectangle([_SAU_LEFT, _SAU_TOP, _SAU_RIGHT, _SAU_BOT], fill=SLATE)
     draw.rectangle(
         [_SAU_LEFT, _SAU_TOP, _SAU_RIGHT, _SAU_BOT], outline=BLACK
     )
+    # Top highlight - bright edge catches the light
     draw.line(
         [(_SAU_LEFT + 1, _SAU_TOP + 1), (_SAU_RIGHT - 1, _SAU_TOP + 1)],
         fill=LIGHT_GRAY,
     )
+    # PC-98 magenta glint on the saucer edge
+    for x in range(_SAU_LEFT + 3, _SAU_RIGHT - 2, 5):
+        px[x, _SAU_TOP + 1] = DUSTY_ROSE
+
+    # Shadow below saucer - darker than table, blends into wood
+    shadow_y = _SAU_BOT + 1
+    if shadow_y < _TABLE_TOP:
+        shadow_y = _TABLE_TOP
+    for y in range(shadow_y, min(shadow_y + 2, SCENE_H)):
+        for x in range(_SAU_LEFT + 2, _SAU_RIGHT - 1):
+            if 0 <= x < SCENE_W and 0 <= y < SCENE_H:
+                px[x, y] = DARK_BROWN

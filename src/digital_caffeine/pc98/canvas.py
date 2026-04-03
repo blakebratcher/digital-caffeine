@@ -12,7 +12,7 @@ _UPPER_HALF = "\u2580"
 _FULL_BLOCK = "\u2588"
 _SPACE = " "
 
-_SCANLINE_FACTOR = 0.8
+_SCANLINE_FACTOR = 0.92
 
 
 class PixelCanvas:

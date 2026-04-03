@@ -251,8 +251,10 @@ def start(
                     simulate=simulate,
                 )
                 app.run()
-            except Exception:
-                # Textual failed - fall back to Rich display
+            except Exception as exc:
+                # Textual failed - show error and fall back to Rich display
+                console.print(f"[yellow]PC-98 display failed: {exc}[/yellow]")
+                console.print("[dim]Falling back to classic display...[/dim]")
                 _run_rich_display(
                     engine=engine, mode=mode,
                     duration_seconds=duration_seconds,

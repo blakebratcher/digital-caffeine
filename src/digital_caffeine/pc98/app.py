@@ -13,40 +13,55 @@ from digital_caffeine.animations import MODE_DISPLAY, format_time
 from digital_caffeine.constants import Mode
 from digital_caffeine.engine import CaffeineEngine
 from digital_caffeine.pc98.dialogue import format_dialogue_box
-from digital_caffeine.pc98.palette import DEEP_NAVY, GOLD, PALETTE, STEEL_BLUE
+from digital_caffeine.pc98.palette import (
+    DEEP_NAVY,
+    GOLD,
+    MAGENTA,
+    OFF_WHITE,
+    PALETTE,
+    STEEL_BLUE,
+)
 from digital_caffeine.pc98.scene import CoffeeScene
 from digital_caffeine.pc98.status import format_status_text
 
 _FPS = 24
 
+# Box drawing for title bar
+_H = "\u2550"
+_DIAMOND = "\u25c6"
+
 
 class SceneWidget(Static):
     """Displays the Pillow-rendered pixel art scene as half-block characters."""
+
     DEFAULT_CSS = """
     SceneWidget {
         width: auto;
         height: auto;
+        padding: 0 1;
     }
     """
 
 
 class StatusWidget(Static):
     """Displays the right-side status panel."""
+
     DEFAULT_CSS = """
     StatusWidget {
-        width: 32;
+        width: 34;
         height: 100%;
-        padding: 1 1;
+        padding: 0 0;
     }
     """
 
 
 class DialogueWidget(Static):
     """Displays the bottom VN dialogue box."""
+
     DEFAULT_CSS = """
     DialogueWidget {
         width: 100%;
-        height: 5;
+        height: 4;
         padding: 0 1;
     }
     """
@@ -54,13 +69,16 @@ class DialogueWidget(Static):
 
 class TitleWidget(Static):
     """Startup title card shown briefly on launch."""
-    DEFAULT_CSS = """
-    TitleWidget {
+
+    DEFAULT_CSS = f"""
+    TitleWidget {{
         width: 100%;
         height: 100%;
+        background: {PALETTE[DEEP_NAVY]};
+        color: {PALETTE[GOLD]};
         content-align: center middle;
         text-align: center;
-    }
+    }}
     """
 
 
@@ -77,7 +95,6 @@ class PC98App(App):
         height: 1;
         background: {PALETTE[STEEL_BLUE]};
         color: {PALETTE[GOLD]};
-        text-align: center;
         padding: 0 1;
     }}
     #main-area {{
@@ -95,8 +112,9 @@ class PC98App(App):
     }}
     #dialogue-area {{
         width: 100%;
-        height: 5;
+        height: 4;
         border-top: solid {PALETTE[STEEL_BLUE]};
+        padding: 0 1;
     }}
     #title-screen {{
         width: 100%;
@@ -109,8 +127,8 @@ class PC98App(App):
     """
 
     BINDINGS = [
-        Binding("q", "quit", "Quit", show=True),
-        Binding("space", "toggle_pause", "Pause/Resume", show=True),
+        Binding("q", "quit", "Quit", show=False),
+        Binding("space", "toggle_pause", "Pause/Resume", show=False),
         Binding("ctrl+c", "quit", "Exit"),
     ]
 
@@ -134,16 +152,32 @@ class PC98App(App):
         self._title_done = False
 
     def compose(self) -> ComposeResult:
-        yield TitleWidget(
-            "\n\n[bold]DIGITAL CAFFEINE[/bold]\n\n[dim]PC-98 ver.[/dim]",
-            id="title-screen",
+        gold = PALETTE[GOLD]
+        blue = PALETTE[STEEL_BLUE]
+        mag = PALETTE[MAGENTA]
+        white = PALETTE[OFF_WHITE]
+
+        # Title card with PC-98 drama
+        title_text = (
+            f"\n\n\n"
+            f"[{blue}]{_H * 20}[/]\n"
+            f"\n"
+            f"[bold {gold}]{_DIAMOND}  DIGITAL CAFFEINE  {_DIAMOND}[/]\n"
+            f"\n"
+            f"[{blue}]{_H * 20}[/]\n"
+            f"\n"
+            f"[{mag}]PC-98 ver.[/]  [{white} dim]press Q to quit, SPACE to pause[/]"
         )
-        yield Static(
-            f"  [{PALETTE[GOLD]}]Digital Caffeine[/]"
-            f"{'':>40}"
-            f"[dim]PC-98 ver.[/dim]",
-            id="title-bar",
+        yield TitleWidget(title_text, id="title-screen")
+
+        # Title bar
+        bar_text = (
+            f"  [{gold}]{_DIAMOND} Digital Caffeine[/]"
+            f"{'':>30}"
+            f"[dim]Q=quit  SPACE=pause[/]"
         )
+        yield Static(bar_text, id="title-bar")
+
         with Horizontal(id="main-area"):
             yield SceneWidget("", id="scene-area")
             yield StatusWidget("", id="status-area")
@@ -153,7 +187,7 @@ class PC98App(App):
         self.query_one("#title-bar").display = False
         self.query_one("#main-area").display = False
         self.query_one("#dialogue-area").display = False
-        self.set_timer(1.5, self.dismiss_title)
+        self.set_timer(2.0, self.dismiss_title)
 
     def dismiss_title(self) -> None:
         """Hide title card and show main UI."""
