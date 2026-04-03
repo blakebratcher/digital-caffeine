@@ -25,25 +25,25 @@ from digital_caffeine.constants import Mode
 
 
 def test_steam_frames_are_generated() -> None:
-    assert len(STEAM_FRAMES) == 24
+    assert len(STEAM_FRAMES) == 48
 
 
 def test_get_steam_frame_cycles() -> None:
     first = get_steam_frame(frame=0, paused=False)
-    # Steam advances at half FPS, so full cycle is len * 2 frames
-    wrapped = get_steam_frame(frame=len(STEAM_FRAMES) * 2, paused=False)
+    # Steam advances every 3 frames, so full cycle is len * 3 frames
+    wrapped = get_steam_frame(frame=len(STEAM_FRAMES) * 3, paused=False)
     assert first == wrapped
 
 
-def test_get_steam_frame_has_five_lines() -> None:
+def test_get_steam_frame_has_seven_lines() -> None:
     result = get_steam_frame(frame=0, paused=False)
-    assert len(result.split("\n")) == 5
+    assert len(result.split("\n")) == 7
 
 
 def test_get_steam_frame_paused_returns_blank_lines() -> None:
     result = get_steam_frame(frame=0, paused=True)
     lines = result.split("\n")
-    assert len(lines) == 5
+    assert len(lines) == 7
     assert all(line.strip() == "" for line in lines)
 
 

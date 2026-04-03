@@ -27,23 +27,47 @@ def _pad_to(s: str, width: int) -> str:
     return s + " " * max(0, width - _visible_len(s))
 
 
-# -- Procedural steam generation with per-character color --------------------
+# -- Procedural steam generation with warm-to-cool gradient ----------------
 
 _STEAM_WIDTH = 25
-_STEAM_HEIGHT = 5
+_STEAM_HEIGHT = 7
 
-# Wisp brightness by age (0 = near cup = brightest)
-_WISP_COLORS = ["#AAAAAA", "#888888", "#666666", "#555555", "#444444"]
-_TRAIL_COLORS = ["#777777", "#555555", "#444444", "#383838", "#303030"]
+# Warm near cup (bottom rows), cooling to gray as steam rises (top rows)
+_WISP_COLORS = [
+    "#444444",  # row 0 (top) - nearly invisible
+    "#555555",  # row 1
+    "#666666",  # row 2
+    "#888888",  # row 3 - mid gray
+    "#997755",  # row 4 - warm tan
+    "#AA8866",  # row 5 - warm brown-tan
+    "#AA8866",  # row 6 (bottom, near cup) - warmest
+]
+_TRAIL_COLORS = [
+    "#303030",
+    "#383838",
+    "#444444",
+    "#555555",
+    "#776655",
+    "#886644",
+    "#886644",
+]
+
+# Heat shimmer characters and colors for bottom 2 rows
+_SHIMMER_CHARS = ["*", "\u00b7", "'"]
+_SHIMMER_COLORS = ["#FFB347", "#FFA500", "#FF8C00"]
 
 
 def _generate_steam_frames() -> list[str]:
-    """Generate steam frames with per-character color based on altitude."""
+    """Generate 48 steam frames with warm-to-cool gradient and heat shimmer.
+
+    Wisps start warm near the cup and cool to gray as they rise.
+    Occasional shimmer characters appear near the cup in warm orange/gold.
+    """
     cx = 12
-    num_frames = 24
-    age_chars = [")", "~", "'", "\u00b7", "."]
-    trail_chars = ["~", "'", "\u00b7", ".", " "]
-    max_age = 7
+    num_frames = 48
+    age_chars = [")", "~", "'", "\u00b7", ".", "\u00b7", "'"]
+    trail_chars = ["~", "'", "\u00b7", ".", " ", " ", " "]
+    max_age = 9
 
     wisps = [
         (0, cx - 2, 1.2, 0.50),
@@ -56,6 +80,11 @@ def _generate_steam_frames() -> list[str]:
         (0, cx + 3, 0.7, 0.35),
         (3, cx - 3, 1.0, 0.55),
         (5, cx + 2, 1.4, 0.45),
+        (1, cx - 4, 1.1, 0.65),
+        (7, cx + 3, 0.9, 0.50),
+        (2, cx - 1, 1.6, 0.35),
+        (4, cx, 0.7, 0.75),
+        (6, cx - 2, 1.3, 0.55),
     ]
 
     frames = []
@@ -71,7 +100,7 @@ def _generate_steam_frames() -> list[str]:
 
             if 0 <= row < _STEAM_HEIGHT:
                 char = age_chars[min(age, len(age_chars) - 1)]
-                color = _WISP_COLORS[min(age, len(_WISP_COLORS) - 1)]
+                color = _WISP_COLORS[min(row, len(_WISP_COLORS) - 1)]
                 if 0 <= x < _STEAM_WIDTH and char_grid[row][x] == " ":
                     char_grid[row][x] = char
                     color_grid[row][x] = color
@@ -80,9 +109,7 @@ def _generate_steam_frames() -> list[str]:
             tr = row + 1
             if 0 <= tr < _STEAM_HEIGHT and age > 0:
                 tc = trail_chars[min(age - 1, len(trail_chars) - 1)]
-                tcol = _TRAIL_COLORS[
-                    min(age - 1, len(_TRAIL_COLORS) - 1)
-                ]
+                tcol = _TRAIL_COLORS[min(tr, len(_TRAIL_COLORS) - 1)]
                 tx = int(round(bx + drift * 0.6))
                 if (
                     tc != " "
@@ -91,6 +118,16 @@ def _generate_steam_frames() -> list[str]:
                 ):
                     char_grid[tr][tx] = tc
                     color_grid[tr][tx] = tcol
+
+        # Heat shimmer in bottom 2 rows
+        shimmer_seed = f * 7 + 13
+        for row in range(_STEAM_HEIGHT - 2, _STEAM_HEIGHT):
+            # Deterministic pseudo-random shimmer
+            sx = (shimmer_seed * (row + 1) * 31) % _STEAM_WIDTH
+            if char_grid[row][sx] == " " and (shimmer_seed + row) % 5 < 2:
+                si = (shimmer_seed + row) % len(_SHIMMER_CHARS)
+                char_grid[row][sx] = _SHIMMER_CHARS[si]
+                color_grid[row][sx] = _SHIMMER_COLORS[si]
 
         # Render with per-character markup
         frame_lines = []
@@ -114,13 +151,13 @@ STEAM_FRAMES: list[str] = _generate_steam_frames()
 def get_steam_frame(frame: int, *, paused: bool) -> str:
     """Return the steam art for the current frame.
 
-    Each steam character has its own color - bright near the cup,
-    fading to near-invisible at the top. Trails are even fainter.
-    Steam advances at half the display FPS for natural rising speed.
+    Warm wisps near the cup cool to gray as they rise. Heat shimmer
+    sparkles in orange/gold near the cup mouth. Steam advances every
+    3 display frames for natural rising speed at 24 FPS.
     """
     if paused:
         return "\n".join([" " * _STEAM_WIDTH] * _STEAM_HEIGHT)
-    sf = (frame // 2) % len(STEAM_FRAMES)
+    sf = (frame // 3) % len(STEAM_FRAMES)
     return STEAM_FRAMES[sf]
 
 
