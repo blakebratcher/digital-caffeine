@@ -15,6 +15,7 @@ from digital_caffeine.pc98.palette import (
     WARM_BROWN,
     WARM_GRAY,
 )
+from digital_caffeine.pc98.sprites import SCENE_H, SCENE_W
 
 
 @dataclass
@@ -81,19 +82,19 @@ class SteamSystem:
         for p in self.particles:
             ix = int(round(p.x))
             iy = int(round(p.y))
-            if 0 <= ix < 56 and 0 <= iy < 68:
+            if 0 <= ix < SCENE_W and 0 <= iy < SCENE_H:
                 ci = self._color_for_age(p.age)
                 draws.append((ix, iy, ci))
                 # Wider wisps when young
-                if p.age < 25 and 0 <= ix - 1 < 56:
+                if p.age < 25 and 0 <= ix - 1 < SCENE_W:
                     draws.append((ix - 1, iy, ci))
-                if p.age < 15 and 0 <= ix + 1 < 56:
+                if p.age < 15 and 0 <= ix + 1 < SCENE_W:
                     draws.append((ix + 1, iy, ci))
                 # Extra wide when very fresh
                 if p.age < 6:
-                    if 0 <= ix - 2 < 56:
+                    if 0 <= ix - 2 < SCENE_W:
                         draws.append((ix - 2, iy, CREAM))
-                    if 0 <= ix + 2 < 56:
+                    if 0 <= ix + 2 < SCENE_W:
                         draws.append((ix + 2, iy, CREAM))
         return draws
 

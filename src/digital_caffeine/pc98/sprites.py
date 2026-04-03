@@ -1,7 +1,8 @@
 """PC-98 pixel art sprite drawing functions.
 
 All functions draw onto a Pillow palette-mode Image using palette indices.
-Coordinate system: (0,0) is top-left. Scene is SCENE_W x SCENE_H pixels.
+Every pixel is placed with purpose - clean outlines, smooth gradients,
+readable silhouettes. Light source: upper-left.
 """
 
 from __future__ import annotations
@@ -28,387 +29,287 @@ from digital_caffeine.pc98.palette import (
     dither_pick,
 )
 
-# Scene dimensions - larger for denser pixel art
 SCENE_W = 56
 SCENE_H = 68
 
-# -- Layout constants ---------------------------------------------------------
+# -- Layout -------------------------------------------------------------------
 
 _PILLAR_W = 4
 
-# Cup body - centered between pillars
-_CUP_LEFT = 14
-_CUP_RIGHT = 41
-_CUP_TOP = 24
-_CUP_BOTTOM = 51
-_CUP_WALL = 2
+# Cup: slightly tapered (wider rim, narrower base)
+_CUP_RIM_LEFT = 14
+_CUP_RIM_RIGHT = 40
+_CUP_BASE_LEFT = 16
+_CUP_BASE_RIGHT = 38
+_CUP_TOP = 25
+_CUP_BOTTOM = 50
 
-# Cup interior
-_INT_LEFT = _CUP_LEFT + _CUP_WALL
-_INT_RIGHT = _CUP_RIGHT - _CUP_WALL
-_INT_TOP = _CUP_TOP + 3
+# Interior (inside the 1px walls)
+_INT_LEFT = _CUP_RIM_LEFT + 2
+_INT_RIGHT = _CUP_RIM_RIGHT - 2
+_INT_TOP = _CUP_TOP + 2
 
-# Coffee fill layers
-_CREMA_TOP = _INT_TOP
-_CREMA_BOT = _INT_TOP + 3
-_LIGHT_TOP = _CREMA_BOT
-_LIGHT_BOT = _LIGHT_TOP + 4
-_MED_TOP = _LIGHT_BOT
-_MED_BOT = _MED_TOP + 5
-_DARK_TOP = _MED_BOT
-_DARK_BOT = _DARK_TOP + 5
-_DEEP_TOP = _DARK_BOT
-_DEEP_BOT = _CUP_BOTTOM - _CUP_WALL
-
-# Handle
-_HDL_LEFT = _CUP_RIGHT + 1
-_HDL_RIGHT = _CUP_RIGHT + 7
-_HDL_TOP = _CUP_TOP + 5
-_HDL_BOT = _CUP_BOTTOM - 6
+# Handle: C-shape extending right
+_HDL_OUTER_X = 44
+_HDL_TOP = 30
+_HDL_BOT = 46
+_HDL_MID_TOP = 33
+_HDL_MID_BOT = 43
 
 # Saucer
 _SAU_LEFT = 10
-_SAU_RIGHT = 45
-_SAU_TOP = 52
-_SAU_BOT = 55
+_SAU_RIGHT = 46
+_SAU_TOP = 51
+_SAU_BOT = 54
 
 # Table
-_TABLE_TOP = 56
+_TABLE_TOP = 55
 
 # Window
-_WIN_LEFT = _PILLAR_W + 4
-_WIN_RIGHT = SCENE_W - _PILLAR_W - 4
+_WIN_LEFT = _PILLAR_W + 3
+_WIN_RIGHT = SCENE_W - _PILLAR_W - 3
 _WIN_TOP = 2
-_WIN_BOT = 20
+_WIN_BOT = 19
 
 
 def draw_background(img: Image.Image) -> None:
-    """Fill with deep navy and subtle ambient light gradient."""
+    """Solid deep navy background. Calm and quiet."""
     draw = ImageDraw.Draw(img)
-    px = img.load()
     draw.rectangle([0, 0, SCENE_W - 1, SCENE_H - 1], fill=DEEP_NAVY)
-
-    # Subtle ambient glow in the center-top (from window light)
-    for y in range(_WIN_BOT + 1, _CUP_TOP):
-        for x in range(_PILLAR_W + 1, SCENE_W - _PILLAR_W - 1):
-            cx = SCENE_W // 2
-            dist = abs(x - cx)
-            if dist < 15 and (x + y) % 7 == 0:
-                px[x, y] = SLATE
 
 
 def draw_ornate_pillars(img: Image.Image) -> None:
-    """Draw ornate PC-98 style decorative pillar borders."""
+    """Decorative pillar borders on left and right edges."""
     px = img.load()
 
     for side in (0, 1):
         x0 = 0 if side == 0 else SCENE_W - _PILLAR_W
 
-        # Base fill with rich dithered texture
         for y in range(SCENE_H):
-            for x in range(x0, x0 + _PILLAR_W):
-                if x == x0 or x == x0 + _PILLAR_W - 1:
-                    px[x, y] = BLACK  # outer/inner edge
-                elif x == (x0 + 1 if side == 0 else x0 + _PILLAR_W - 2):
-                    px[x, y] = DARK_BROWN  # shadow edge
-                else:
-                    px[x, y] = dither_pick(WARM_BROWN, CHOCOLATE, x, y)
+            # Outer edge: black
+            px[x0 if side == 0 else x0 + _PILLAR_W - 1, y] = BLACK
+            # Inner edge: warm highlight
+            px[x0 + _PILLAR_W - 1 if side == 0 else x0, y] = WARM_GRAY
+            # Body: clean dither
+            for x in range(x0 + 1, x0 + _PILLAR_W - 1):
+                px[x, y] = dither_pick(WARM_BROWN, CHOCOLATE, x, y)
 
-        # Inner highlight edge
-        hx = x0 + _PILLAR_W - 1 if side == 0 else x0
-        for y in range(SCENE_H):
-            px[hx, y] = WARM_GRAY
+        # Gem accents
+        mid = x0 + _PILLAR_W // 2
+        for gy in range(5, SCENE_H - 3, 10):
+            px[mid, gy] = MAGENTA
+            if gy - 1 >= 0:
+                px[mid, gy - 1] = DUSTY_ROSE
+            if gy + 1 < SCENE_H:
+                px[mid, gy + 1] = DUSTY_ROSE
 
-        # Ornate gem diamonds every 8 pixels
-        mid_x = x0 + _PILLAR_W // 2
-        for gy in range(4, SCENE_H - 4, 8):
-            # Diamond: 3x3 with center bright
-            px[mid_x, gy] = MAGENTA
-            for dy in (-1, 1):
-                if 0 <= gy + dy < SCENE_H:
-                    px[mid_x, gy + dy] = DUSTY_ROSE
-            for dx in (-1, 1):
-                nx = mid_x + dx
-                if x0 + 1 <= nx < x0 + _PILLAR_W - 1:
-                    px[nx, gy] = DUSTY_ROSE
-
-        # Horizontal ornate bands every 16 pixels
-        for by in range(0, SCENE_H, 16):
+        # Horizontal bands
+        for by in range(0, SCENE_H, 14):
             for x in range(x0 + 1, x0 + _PILLAR_W - 1):
                 px[x, by] = DEEP_RED
                 if by + 1 < SCENE_H:
                     px[x, by + 1] = MAGENTA
-                if by + 2 < SCENE_H:
-                    px[x, by + 2] = DEEP_RED
-
-        # Vertical groove lines for depth
-        gx = x0 + 2 if side == 0 else x0 + _PILLAR_W - 3
-        for y in range(SCENE_H):
-            if y % 16 > 2:  # skip the horizontal bands
-                px[gx, y] = DARK_BROWN
 
 
 def draw_window(img: Image.Image) -> None:
-    """Draw a detailed window with curtains and light."""
+    """Window with curtains and night sky."""
     draw = ImageDraw.Draw(img)
     px = img.load()
 
-    # Window frame - thick, warm
-    draw.rectangle([_WIN_LEFT, _WIN_TOP, _WIN_RIGHT, _WIN_BOT],
-                    fill=WARM_GRAY)
-    draw.rectangle([_WIN_LEFT, _WIN_TOP, _WIN_RIGHT, _WIN_BOT],
-                    outline=BLACK)
+    # Frame
+    draw.rectangle([_WIN_LEFT, _WIN_TOP, _WIN_RIGHT, _WIN_BOT], outline=WARM_GRAY)
     draw.rectangle([_WIN_LEFT + 1, _WIN_TOP + 1, _WIN_RIGHT - 1, _WIN_BOT - 1],
                     outline=LIGHT_GRAY)
 
-    # Window pane - deep blue sky
-    pane_l = _WIN_LEFT + 2
-    pane_r = _WIN_RIGHT - 2
-    pane_t = _WIN_TOP + 2
-    pane_b = _WIN_BOT - 2
-    draw.rectangle([pane_l, pane_t, pane_r, pane_b], fill=STEEL_BLUE)
+    # Sky pane
+    pl, pt = _WIN_LEFT + 2, _WIN_TOP + 2
+    pr, pb = _WIN_RIGHT - 2, _WIN_BOT - 2
+    draw.rectangle([pl, pt, pr, pb], fill=STEEL_BLUE)
 
     # Crossbars
-    mid_x = (_WIN_LEFT + _WIN_RIGHT) // 2
-    mid_y = (_WIN_TOP + _WIN_BOT) // 2
-    draw.line([(mid_x, pane_t), (mid_x, pane_b)], fill=WARM_GRAY)
-    draw.line([(pane_l, mid_y), (pane_r, mid_y)], fill=WARM_GRAY)
-    # Crossbar highlight
-    draw.line([(mid_x + 1, pane_t), (mid_x + 1, pane_b)], fill=LIGHT_GRAY)
-    draw.line([(pane_l, mid_y + 1), (pane_r, mid_y + 1)], fill=LIGHT_GRAY)
+    mx = (pl + pr) // 2
+    my = (pt + pb) // 2
+    for x in range(pl, pr + 1):
+        px[x, my] = WARM_GRAY
+    for y in range(pt, pb + 1):
+        px[mx, y] = WARM_GRAY
 
-    # Stars/light through the window panes
-    stars = [(pane_l + 4, pane_t + 3), (pane_r - 5, pane_t + 4),
-             (pane_l + 8, pane_b - 4), (pane_r - 8, pane_b - 3),
-             (mid_x + 5, pane_t + 5), (mid_x - 6, pane_b - 5)]
-    for sx, sy in stars:
-        if pane_l < sx < pane_r and pane_t < sy < pane_b:
+    # Stars
+    for sx, sy in [(pl + 3, pt + 2), (pr - 4, pt + 3), (mx + 4, pb - 3),
+                   (pl + 6, pb - 2), (pr - 6, pt + 5)]:
+        if pl < sx < pr and pt < sy < pb and px[sx, sy] == STEEL_BLUE:
             px[sx, sy] = OFF_WHITE
 
-    # Curtains on both sides - rich deep red with folds
-    curtain_w = 4
-    for cy in range(pane_t, pane_b + 1):
+    # Curtains: 2px wide on each side, clean vertical stripes
+    for y in range(pt, pb + 1):
         # Left curtain
-        for cx in range(pane_l, pane_l + curtain_w):
-            fold = (cy + cx) % 3
-            if fold == 0:
-                px[cx, cy] = DEEP_RED
-            elif fold == 1:
-                px[cx, cy] = MAGENTA
-            else:
-                px[cx, cy] = DARK_BROWN
+        px[pl, y] = DEEP_RED
+        px[pl + 1, y] = MAGENTA if y % 2 == 0 else DEEP_RED
         # Right curtain
-        for cx in range(pane_r - curtain_w + 1, pane_r + 1):
-            fold = (cy + cx) % 3
-            if fold == 0:
-                px[cx, cy] = DEEP_RED
-            elif fold == 1:
-                px[cx, cy] = MAGENTA
-            else:
-                px[cx, cy] = DARK_BROWN
+        px[pr, y] = DEEP_RED
+        px[pr - 1, y] = MAGENTA if y % 2 == 0 else DEEP_RED
 
-    # Window sill
+    # Sill
     draw.line([(_WIN_LEFT, _WIN_BOT + 1), (_WIN_RIGHT, _WIN_BOT + 1)],
               fill=LIGHT_GRAY)
-    draw.line([(_WIN_LEFT, _WIN_BOT + 2), (_WIN_RIGHT, _WIN_BOT + 2)],
-              fill=WARM_GRAY)
-
-
-def draw_shelf(img: Image.Image) -> None:
-    """Draw a small decorative shelf on the wall beside the window."""
-    px = img.load()
-    draw = ImageDraw.Draw(img)
-
-    # Shelf on the right side between window and pillar
-    sx0 = _WIN_RIGHT + 3
-    sx1 = SCENE_W - _PILLAR_W - 2
-    sy = _WIN_BOT - 5
-
-    if sx1 <= sx0:
-        return
-
-    # Shelf board
-    draw.line([(sx0, sy), (sx1, sy)], fill=WARM_BROWN)
-    draw.line([(sx0, sy + 1), (sx1, sy + 1)], fill=DARK_BROWN)
-
-    # Small bottle/jar on shelf
-    bx = (sx0 + sx1) // 2
-    for by in range(sy - 4, sy):
-        px[bx, by] = DUSTY_ROSE
-        if bx + 1 <= sx1:
-            px[bx + 1, by] = MAGENTA
-    # Bottle cap
-    if sy - 5 >= 0:
-        px[bx, sy - 5] = WARM_GRAY
 
 
 def draw_table(img: Image.Image) -> None:
-    """Draw a detailed wooden table surface."""
+    """Wooden table surface with clean grain."""
     draw = ImageDraw.Draw(img)
     px = img.load()
 
-    t_left = _PILLAR_W
-    t_right = SCENE_W - _PILLAR_W - 1
+    tl = _PILLAR_W
+    tr = SCENE_W - _PILLAR_W - 1
 
-    # Table edge with depth
-    draw.line([(t_left, _TABLE_TOP), (t_right, _TABLE_TOP)], fill=CREAM)
-    draw.line([(t_left, _TABLE_TOP + 1), (t_right, _TABLE_TOP + 1)],
-              fill=LIGHT_GRAY)
+    # Edge highlight
+    draw.line([(tl, _TABLE_TOP), (tr, _TABLE_TOP)], fill=CREAM)
+    draw.line([(tl, _TABLE_TOP + 1), (tr, _TABLE_TOP + 1)], fill=LIGHT_GRAY)
 
-    # Table body
+    # Body: alternating warm bands
     for y in range(_TABLE_TOP + 2, SCENE_H):
-        for x in range(t_left, t_right + 1):
-            band = (y - _TABLE_TOP) // 3
-            if band % 2 == 0:
-                px[x, y] = WARM_GRAY
-            else:
-                px[x, y] = WARM_BROWN
-            # Grain variation
-            if (x * 7 + y * 13) % 31 == 0:
-                px[x, y] = DARK_BROWN
-            elif (x * 11 + y * 3) % 37 == 0:
-                px[x, y] = LIGHT_GRAY
+        band = (y - _TABLE_TOP) // 3
+        color = WARM_GRAY if band % 2 == 0 else WARM_BROWN
+        for x in range(tl, tr + 1):
+            px[x, y] = color
 
-    # Grain lines
-    for y in range(_TABLE_TOP + 2, SCENE_H, 4):
-        for x in range(t_left, t_right + 1):
-            px[x, y] = dither_pick(LIGHT_GRAY, WARM_GRAY, x, y)
+    # Clean grain lines
+    for y in range(_TABLE_TOP + 4, SCENE_H, 4):
+        for x in range(tl, tr + 1):
+            px[x, y] = LIGHT_GRAY
 
 
 def draw_cup(img: Image.Image) -> None:
-    """Draw a detailed coffee cup with PC-98 style shading and highlights."""
-    draw = ImageDraw.Draw(img)
+    """Coffee cup with tapered shape, smooth gradient, clean shading."""
     px = img.load()
+    cup_h = _CUP_BOTTOM - _CUP_TOP
 
-    # -- Outer shape with thick outline --
-    draw.rectangle([_CUP_LEFT, _CUP_TOP, _CUP_RIGHT, _CUP_BOTTOM],
-                    outline=BLACK)
-    # Second outline for thickness
-    draw.rectangle([_CUP_LEFT + 1, _CUP_TOP + 1,
-                     _CUP_RIGHT - 1, _CUP_BOTTOM - 1],
-                    outline=BLACK)
+    # -- Build the tapered cup shape pixel by pixel --
+    for y in range(_CUP_TOP, _CUP_BOTTOM + 1):
+        t = (y - _CUP_TOP) / max(1, cup_h)  # 0 at top, 1 at bottom
+        # Interpolate between rim width and base width
+        left = int(_CUP_RIM_LEFT + t * (_CUP_BASE_LEFT - _CUP_RIM_LEFT))
+        right = int(_CUP_RIM_RIGHT - t * (_CUP_RIM_RIGHT - _CUP_BASE_RIGHT))
 
-    # -- Cup body walls with lighting gradient --
-    # Left wall: bright (light source from upper-left)
-    for y in range(_CUP_TOP + 2, _CUP_BOTTOM - 1):
-        px[_CUP_LEFT + 2, y] = OFF_WHITE
-        px[_CUP_LEFT + 3, y] = LIGHT_GRAY
+        # Outline
+        px[left, y] = BLACK
+        px[right, y] = BLACK
 
-    # Right wall: darker, more muted
-    for y in range(_CUP_TOP + 2, _CUP_BOTTOM - 1):
-        px[_CUP_RIGHT - 2, y] = WARM_GRAY
-        px[_CUP_RIGHT - 3, y] = LIGHT_GRAY
+        # Walls
+        if left + 1 < right:
+            px[left + 1, y] = OFF_WHITE  # lit wall
+        if right - 1 > left:
+            px[right - 1, y] = WARM_GRAY  # shadow wall
 
-    # -- Rim: 3px thick, the crown of the cup --
-    for x in range(_CUP_LEFT + 2, _CUP_RIGHT - 1):
-        px[x, _CUP_TOP + 2] = OFF_WHITE  # top bright line
-        px[x, _CUP_TOP + 3] = LIGHT_GRAY  # middle
-        px[x, _CUP_TOP + 4] = WARM_GRAY   # bottom shadow
+    # Top and bottom edges
+    for x in range(_CUP_RIM_LEFT, _CUP_RIM_RIGHT + 1):
+        px[x, _CUP_TOP] = BLACK
+    for x in range(_CUP_BASE_LEFT, _CUP_BASE_RIGHT + 1):
+        px[x, _CUP_BOTTOM] = BLACK
 
-    # Rim PC-98 rose/magenta accent highlights
-    for x in range(_CUP_LEFT + 3, _CUP_RIGHT - 2):
+    # -- Rim: bright with rose accents (PC-98 signature) --
+    for x in range(_CUP_RIM_LEFT + 1, _CUP_RIM_RIGHT):
+        px[x, _CUP_TOP + 1] = OFF_WHITE
         if x % 3 == 0:
-            px[x, _CUP_TOP + 2] = DUSTY_ROSE
-        if x % 5 == 0:
-            px[x, _CUP_TOP + 3] = MAGENTA
+            px[x, _CUP_TOP + 1] = DUSTY_ROSE
 
-    # -- Cup bottom --
-    for x in range(_CUP_LEFT + 2, _CUP_RIGHT - 1):
-        px[x, _CUP_BOTTOM - 2] = WARM_GRAY
-        px[x, _CUP_BOTTOM - 3] = LIGHT_GRAY
+    # -- Coffee fill: smooth horizontal bands --
+    fill_top = _CUP_TOP + 2
+    fill_bot = _CUP_BOTTOM - 1
+    fill_h = fill_bot - fill_top
+    if fill_h <= 0:
+        return
 
-    # -- Coffee fill with rich layered gradient --
-    _fill_layer(px, _CREMA_TOP, _CREMA_BOT, CREAM, AMBER)
-    _fill_layer(px, _LIGHT_TOP, _LIGHT_BOT, CHOCOLATE, AMBER)
-    _fill_layer(px, _MED_TOP, _MED_BOT, WARM_BROWN, CHOCOLATE)
-    _fill_layer(px, _DARK_TOP, _DARK_BOT, DARK_BROWN, WARM_BROWN)
-    _fill_layer(px, _DEEP_TOP, _DEEP_BOT, DARK_BROWN, DARK_BROWN)
+    # Layers: (solid_color, start_pct, end_pct)
+    # Dithering only at boundaries between layers
+    solid_layers = [
+        (CREAM, 0.00, 0.10),       # crema
+        (AMBER, 0.12, 0.18),       # warm transition
+        (CHOCOLATE, 0.20, 0.38),   # light coffee
+        (WARM_BROWN, 0.40, 0.58),  # medium
+        (DARK_BROWN, 0.60, 0.80),  # dark
+        (DARK_BROWN, 0.82, 1.00),  # deepest
+    ]
+    # Transition rows between layers (dithered)
+    transitions = [
+        (CREAM, AMBER, 0.10, 0.12),
+        (AMBER, CHOCOLATE, 0.18, 0.20),
+        (CHOCOLATE, WARM_BROWN, 0.38, 0.40),
+        (WARM_BROWN, DARK_BROWN, 0.58, 0.60),
+        (DARK_BROWN, DARK_BROWN, 0.80, 0.82),
+    ]
 
-    # Dithered transitions
-    for x in range(_INT_LEFT, _INT_RIGHT + 1):
-        for boundary, c1, c2 in [
-            (_CREMA_BOT, AMBER, CHOCOLATE),
-            (_LIGHT_BOT, CHOCOLATE, WARM_BROWN),
-            (_MED_BOT, WARM_BROWN, DARK_BROWN),
-        ]:
-            if boundary < SCENE_H:
-                px[x, boundary] = dither_pick(c1, c2, x, boundary)
-                if boundary + 1 < SCENE_H:
-                    px[x, boundary + 1] = dither_pick(c2, c1, x, boundary + 1)
+    for y in range(fill_top, fill_bot):
+        pct = (y - fill_top) / max(1, fill_h)
+        t = (y - _CUP_TOP) / max(1, cup_h)
+        left = int(_CUP_RIM_LEFT + t * (_CUP_BASE_LEFT - _CUP_RIM_LEFT)) + 2
+        right = int(_CUP_RIM_RIGHT - t * (_CUP_RIM_RIGHT - _CUP_BASE_RIGHT)) - 2
 
-    # -- Specular highlights on crema --
-    for y in range(_CREMA_TOP, min(_CREMA_TOP + 3, _CREMA_BOT)):
-        px[_INT_LEFT, y] = OFF_WHITE
-        px[_INT_LEFT + 1, y] = OFF_WHITE
-        px[_INT_LEFT + 2, y] = GOLD
+        # Check if this row is a transition
+        is_trans = False
+        for ca, cb, start, end in transitions:
+            if start <= pct < end:
+                for x in range(left, right + 1):
+                    px[x, y] = dither_pick(ca, cb, x, y)
+                is_trans = True
+                break
 
-    # Warm glow reflected on left cup wall from coffee
-    for y in range(_CREMA_TOP, _MED_TOP):
-        px[_CUP_LEFT + 2, y] = dither_pick(OFF_WHITE, AMBER, _CUP_LEFT, y)
-        px[_CUP_LEFT + 3, y] = dither_pick(LIGHT_GRAY, GOLD, _CUP_LEFT, y)
+        if not is_trans:
+            # Solid fill for the layer body
+            color = DARK_BROWN  # default
+            for sc, start, end in solid_layers:
+                if start <= pct < end:
+                    color = sc
+                    break
+            for x in range(left, right + 1):
+                px[x, y] = color
 
-
-def _fill_layer(
-    px: object,
-    y_top: int,
-    y_bot: int,
-    primary: int,
-    accent: int,
-) -> None:
-    """Fill a coffee layer with rich dithered texture."""
-    for y in range(y_top, y_bot):
-        for x in range(_INT_LEFT, _INT_RIGHT + 1):
-            # More complex dither - creates a richer texture
-            h = (x * 7 + y * 13) % 20
-            if h < 3:
-                px[x, y] = accent
-            elif h < 5:
-                px[x, y] = dither_pick(primary, accent, x, y)
-            else:
-                px[x, y] = primary
+    # -- Specular highlight on crema (bright spot upper-left) --
+    for dy in range(3):
+        y = fill_top + dy
+        if y < fill_bot:
+            t = (y - _CUP_TOP) / max(1, cup_h)
+            left = int(_CUP_RIM_LEFT + t * (_CUP_BASE_LEFT - _CUP_RIM_LEFT)) + 2
+            px[left, y] = OFF_WHITE
+            if left + 1 <= _INT_RIGHT:
+                px[left + 1, y] = GOLD
 
 
 def draw_handle(img: Image.Image) -> None:
-    """Draw a detailed cup handle with shading."""
-    draw = ImageDraw.Draw(img)
+    """C-shaped handle extending from the right side of the cup."""
     px = img.load()
 
-    # Outer outline
-    draw.rectangle([_HDL_LEFT, _HDL_TOP, _HDL_RIGHT, _HDL_BOT],
-                    outline=BLACK)
-    draw.rectangle([_HDL_LEFT + 1, _HDL_TOP + 1,
-                     _HDL_RIGHT - 1, _HDL_BOT - 1],
-                    outline=BLACK)
+    # The handle is a C-shape: top bar, outer vertical, bottom bar
+    # connecting to the cup at _CUP_RIM_RIGHT area
 
-    # Fill
-    for y in range(_HDL_TOP + 2, _HDL_BOT - 1):
-        for x in range(_HDL_LEFT + 2, _HDL_RIGHT - 1):
-            px[x, y] = WARM_GRAY
+    # Top horizontal bar
+    for x in range(_CUP_RIM_RIGHT, _HDL_OUTER_X + 1):
+        px[x, _HDL_TOP] = BLACK
+        px[x, _HDL_TOP + 1] = OFF_WHITE  # highlight
+        px[x, _HDL_TOP + 2] = WARM_GRAY
 
-    # Top highlight
-    for x in range(_HDL_LEFT + 2, _HDL_RIGHT - 1):
-        px[x, _HDL_TOP + 2] = OFF_WHITE
-        px[x, _HDL_TOP + 3] = LIGHT_GRAY
+    # Bottom horizontal bar
+    for x in range(_CUP_BASE_RIGHT, _HDL_OUTER_X + 1):
+        px[x, _HDL_BOT] = BLACK
+        px[x, _HDL_BOT - 1] = WARM_GRAY
+        px[x, _HDL_BOT - 2] = LIGHT_GRAY
 
-    # Left edge (connects to cup)
-    for y in range(_HDL_TOP + 2, _HDL_BOT - 1):
-        px[_HDL_LEFT + 2, y] = LIGHT_GRAY
+    # Outer vertical bar
+    for y in range(_HDL_TOP, _HDL_BOT + 1):
+        px[_HDL_OUTER_X, y] = BLACK
+        px[_HDL_OUTER_X - 1, y] = WARM_GRAY
+        if _HDL_OUTER_X - 2 > _CUP_RIM_RIGHT:
+            px[_HDL_OUTER_X - 2, y] = LIGHT_GRAY
 
-    # Hollow interior
-    il = _HDL_LEFT + 4
-    ir = _HDL_RIGHT - 2
-    it = _HDL_TOP + 5
-    ib = _HDL_BOT - 4
-    if ir > il and ib > it:
-        draw.rectangle([il, it, ir, ib], fill=DEEP_NAVY)
-        draw.rectangle([il, it, ir, ib], outline=BLACK)
-        # Inner shadow
-        for y in range(it + 1, ib):
-            px[il + 1, y] = SLATE
+    # Interior of handle (cutout)
+    for y in range(_HDL_MID_TOP, _HDL_MID_BOT + 1):
+        for x in range(_CUP_RIM_RIGHT + 1, _HDL_OUTER_X - 2):
+            if x > 0 and y > 0:
+                px[x, y] = DEEP_NAVY
 
 
 def draw_saucer(img: Image.Image) -> None:
-    """Draw a detailed saucer with rim highlights and depth."""
+    """Wide saucer plate under the cup with highlights."""
     draw = ImageDraw.Draw(img)
     px = img.load()
 
@@ -416,26 +317,13 @@ def draw_saucer(img: Image.Image) -> None:
     draw.rectangle([_SAU_LEFT, _SAU_TOP, _SAU_RIGHT, _SAU_BOT], fill=SLATE)
     draw.rectangle([_SAU_LEFT, _SAU_TOP, _SAU_RIGHT, _SAU_BOT], outline=BLACK)
 
-    # Top rim - bright, catches light
+    # Top highlight
     for x in range(_SAU_LEFT + 1, _SAU_RIGHT):
         px[x, _SAU_TOP + 1] = LIGHT_GRAY
-        px[x, _SAU_TOP + 2] = OFF_WHITE
-        if x % 4 == 0:
-            px[x, _SAU_TOP + 2] = DUSTY_ROSE
+        if x % 5 == 0:
+            px[x, _SAU_TOP + 1] = DUSTY_ROSE
 
-    # Bottom shadow
-    for x in range(_SAU_LEFT + 1, _SAU_RIGHT):
-        px[x, _SAU_BOT - 1] = DARK_BROWN
-
-    # Saucer inner detail
-    for y in range(_SAU_TOP + 3, _SAU_BOT - 1):
-        for x in range(_SAU_LEFT + 1, _SAU_RIGHT):
-            if (x + y) % 5 == 0:
-                px[x, y] = WARM_GRAY
-
-    # Shadow on table below saucer
-    shadow_y = max(_SAU_BOT + 1, _TABLE_TOP)
-    for y in range(shadow_y, min(shadow_y + 3, SCENE_H)):
-        for x in range(_SAU_LEFT + 3, _SAU_RIGHT - 2):
-            if _PILLAR_W <= x < SCENE_W - _PILLAR_W:
-                px[x, y] = DARK_BROWN
+    # Shadow below
+    for x in range(_SAU_LEFT + 2, _SAU_RIGHT - 1):
+        if _SAU_BOT + 1 < SCENE_H:
+            px[x, _SAU_BOT + 1] = DARK_BROWN
