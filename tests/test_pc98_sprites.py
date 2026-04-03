@@ -61,8 +61,10 @@ class TestDrawTable:
         draw_background(img)
         draw_table(img)
         px = img.load()
-        # Table uses warm brown and warm gray bands
-        assert px[32, SCENE_H - 1] in (WARM_GRAY, WARM_BROWN, DARK_BROWN)
+        from digital_caffeine.pc98.palette import LIGHT_GRAY as LG
+        # Table uses warm brown, warm gray, light gray bands
+        table_colors = (WARM_GRAY, WARM_BROWN, DARK_BROWN, LG)
+        assert px[32, SCENE_H - 1] in table_colors
 
     def test_table_has_grain_lines(self):
         img = _make_scene()

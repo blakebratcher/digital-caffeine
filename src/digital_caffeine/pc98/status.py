@@ -11,14 +11,15 @@ from digital_caffeine.pc98.palette import (
     STEEL_BLUE,
 )
 
-# Box drawing characters for PC-98 aesthetic
-_TL = "\u250c"  # top-left corner
-_TR = "\u2510"  # top-right corner
-_BL = "\u2514"  # bottom-left corner
-_BR = "\u2518"  # bottom-right corner
-_H = "\u2500"   # horizontal
-_V = "\u2502"   # vertical
-_DIAMOND = "\u25c6"  # filled diamond
+# Ornate box drawing for PC-98 VN feel
+_TL = "\u2554"  # double top-left
+_TR = "\u2557"  # double top-right
+_BL = "\u255a"  # double bottom-left
+_BR = "\u255d"  # double bottom-right
+_H = "\u2550"   # double horizontal
+_V = "\u2551"   # double vertical
+_DIAMOND = "\u25c6"
+_DOT = "\u00b7"
 
 
 def _format_time(seconds: int) -> str:
@@ -46,7 +47,6 @@ def format_status_text(
     rose = PALETTE[DUSTY_ROSE]
     mag = PALETTE[MAGENTA]
 
-    # State indicator with PC-98 style diamond
     if paused:
         state_str = f"[{gold}]{_DIAMOND} Paused[/]"
     elif active:
@@ -59,27 +59,24 @@ def format_status_text(
     uptime_str = _format_time(uptime_seconds)
     sim_str = f"[{gold}]On[/]" if simulate else "[dim]Off[/]"
 
-    w = 26  # inner width
-    border = f"[{blue}]"
-    header = f"  {border}{_TL}{_H * w}{_TR}[/]"
-    footer = f"  {border}{_BL}{_H * w}{_BR}[/]"
-    sep = f"  {border}{_V}[/]{border}{_H * w}[/]{border}{_V}[/]"
-
-    def row(content: str) -> str:
-        return f"  {border}{_V}[/] {content}"
+    w = 26
+    b = f"[{blue}]"
+    d = f"[{rose}]{_DOT}[/]"  # decorative dot
+    bar_top = f"  {b}{_TL}{_H}{_H}[/]{d}{b}{_H * (w - 4)}{_H}[/]{d}{b}{_H}{_TR}[/]"
+    bar_bot = f"  {b}{_BL}{_H}{_H}[/]{d}{b}{_H * (w - 4)}{_H}[/]{d}{b}{_H}{_BR}[/]"
 
     lines = [
         "",
-        header,
-        row(f"[{gold} bold]  STATUS[/]"),
-        sep,
-        row(f"[{white}]State:[/]    {state_str}"),
-        row(f"[{white}]Mode:[/]     [{rose}]{mode_label}[/]"),
-        row(f"[{white}]Uptime:[/]   [{white}]{uptime_str}[/]"),
-        row(f"[{white}]Remain:[/]   {remaining_str}"),
-        row(f"[{white}]Interval:[/] {interval}s"),
-        row(f"[{white}]Simulate:[/] {sim_str}"),
-        footer,
+        bar_top,
+        f"  {b}{_V}[/] [{gold} bold]{_DIAMOND} STATUS {_DIAMOND}[/]",
+        f"  {b}{_V}[/]{b}{_H * w}{_V}[/]",
+        f"  {b}{_V}[/] [{white}]State:[/]    {state_str}",
+        f"  {b}{_V}[/] [{white}]Mode:[/]     [{rose}]{mode_label}[/]",
+        f"  {b}{_V}[/] [{white}]Uptime:[/]   [{white}]{uptime_str}[/]",
+        f"  {b}{_V}[/] [{white}]Remain:[/]   {remaining_str}",
+        f"  {b}{_V}[/] [{white}]Interval:[/] {interval}s",
+        f"  {b}{_V}[/] [{white}]Simulate:[/] {sim_str}",
+        bar_bot,
     ]
 
     if progress_pct is not None:
@@ -92,8 +89,16 @@ def format_status_text(
             else:
                 bar_chars += f"[{blue}]\u2591[/]"
         lines.append("")
-        lines.append(f"  {border}{_TL}{_H * w}{_TR}[/]")
-        lines.append(row(f" {bar_chars} [{white}]{progress_pct}%[/]"))
-        lines.append(f"  {border}{_BL}{_H * w}{_BR}[/]")
+        lines.append(
+            f"  {b}{_TL}{_H}[/][{rose}]{_DOT}[/]"
+            f"{b}{_H * (w - 4)}[/]"
+            f"[{rose}]{_DOT}[/]{b}{_H}{_TR}[/]"
+        )
+        lines.append(f"  {b}{_V}[/] {bar_chars} [{white}]{progress_pct}%[/]")
+        lines.append(
+            f"  {b}{_BL}{_H}[/][{rose}]{_DOT}[/]"
+            f"{b}{_H * (w - 4)}[/]"
+            f"[{rose}]{_DOT}[/]{b}{_H}{_BR}[/]"
+        )
 
     return "\n".join(lines)
