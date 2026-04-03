@@ -122,12 +122,21 @@ def _generate_steam_frames() -> list[str]:
         # Heat shimmer in bottom 2 rows
         shimmer_seed = f * 7 + 13
         for row in range(_STEAM_HEIGHT - 2, _STEAM_HEIGHT):
-            # Deterministic pseudo-random shimmer
             sx = (shimmer_seed * (row + 1) * 31) % _STEAM_WIDTH
             if char_grid[row][sx] == " " and (shimmer_seed + row) % 5 < 2:
                 si = (shimmer_seed + row) % len(_SHIMMER_CHARS)
                 char_grid[row][sx] = _SHIMMER_CHARS[si]
                 color_grid[row][sx] = _SHIMMER_COLORS[si]
+
+        # Ambient floating particles - faint sparkles drifting in the air
+        for p in range(3):
+            ap_seed = f * 19 + p * 43
+            ar = (ap_seed * 7) % _STEAM_HEIGHT
+            ax = (ap_seed * 13 + int(math.sin(f * 0.3 + p) * 2)) % _STEAM_WIDTH
+            if char_grid[ar][ax] == " " and (ap_seed % 11) < 3:
+                char_grid[ar][ax] = "\u00b7"
+                brightness = 0x30 + (ap_seed % 0x20)
+                color_grid[ar][ax] = f"#{brightness:02x}{brightness:02x}{brightness:02x}"
 
         # Render with per-character markup
         frame_lines = []
@@ -188,24 +197,24 @@ def get_steam_frame(frame: int, *, paused: bool) -> str:
 
 # -- Cup art with animated liquid surface, glow, and shimmer ----------------
 
-# 16 ripple patterns (characters only - color applied dynamically)
+# 16 ripple patterns (13 chars wide - color applied dynamically)
 _SURFACE_CHARS: list[str] = [
-    "~\u2248~\u2248~\u2248~\u2248~\u2248~",
-    "~\u2248\u2248~\u2248~\u2248\u2248~\u2248~",
-    "\u2248~\u2248~\u2248~\u2248~\u2248~\u2248",
-    "\u2248~\u2248\u2248~\u2248\u2248~\u2248~\u2248",
-    "\u2248~~\u2248~~\u2248~~\u2248~",
-    "~\u2248\u2248~\u2248\u2248~\u2248\u2248~\u2248",
-    "~\u2248~\u2248\u2248~\u2248~\u2248~\u2248",
-    "\u2248~\u2248~\u2248\u2248~\u2248~\u2248~",
-    "~\u2248~\u2248~\u2248~\u2248\u2248~\u2248",
-    "\u2248\u2248~\u2248~\u2248~\u2248~\u2248~",
-    "~\u2248\u2248~\u2248~\u2248\u2248~\u2248\u2248",
-    "\u2248~\u2248\u2248~\u2248~\u2248~\u2248~",
-    "~\u2248~\u2248\u2248\u2248~\u2248~\u2248~",
-    "\u2248~\u2248~\u2248~\u2248\u2248\u2248~\u2248",
-    "\u2248\u2248~\u2248~~\u2248~\u2248\u2248~",
-    "~\u2248\u2248\u2248~\u2248~\u2248~\u2248~",
+    "~\u2248~\u2248~\u2248~\u2248~\u2248~\u2248~",
+    "~\u2248\u2248~\u2248~\u2248\u2248~\u2248~\u2248~",
+    "\u2248~\u2248~\u2248~\u2248~\u2248~\u2248~\u2248",
+    "\u2248~\u2248\u2248~\u2248\u2248~\u2248~\u2248\u2248~",
+    "\u2248~~\u2248~~\u2248~~\u2248~\u2248~",
+    "~\u2248\u2248~\u2248\u2248~\u2248\u2248~\u2248\u2248~",
+    "~\u2248~\u2248\u2248~\u2248~\u2248~\u2248~\u2248",
+    "\u2248~\u2248~\u2248\u2248~\u2248~\u2248~\u2248~",
+    "~\u2248~\u2248~\u2248~\u2248\u2248~\u2248~\u2248",
+    "\u2248\u2248~\u2248~\u2248~\u2248~\u2248~\u2248~",
+    "~\u2248\u2248~\u2248~\u2248\u2248~\u2248\u2248~\u2248",
+    "\u2248~\u2248\u2248~\u2248~\u2248~\u2248~\u2248~",
+    "~\u2248~\u2248\u2248\u2248~\u2248~\u2248~\u2248~",
+    "\u2248~\u2248~\u2248~\u2248\u2248\u2248~\u2248~\u2248",
+    "\u2248\u2248~\u2248~~\u2248~\u2248\u2248~\u2248~",
+    "~\u2248\u2248\u2248~\u2248~\u2248~\u2248~\u2248~",
 ]
 
 
@@ -248,39 +257,41 @@ def _surface_with_shimmer(frame: int) -> str:
             result += f"[{color}]{ch}[/]"
     return result
 
-# Pre-built cup components with hex color gradient
-_CUP_TOP = "     [white]\u250c" + "\u2500" * 13 + "\u2510[/]    "
-_CUP_BOT = "     [white]\u2514" + "\u2500" * 13 + "\u2518[/]    "
-_CUP_SAUCER = "    [#555555]" + "\u2550" * 19 + "[/]  "
-_CUP_DIM = "[dim]" + "\u2591" * 11 + "[/]"
+# Pre-built cup components
+_CUP_RIM = "     [#DDDDDD]\u2554" + "\u2550" * 13 + "\u2557[/]    "
+_CUP_BOT = "     [#CCCCCC]\u255a" + "\u2550" * 13 + "\u255d[/]    "
+_CUP_DIM = "[dim]" + "\u2591" * 13 + "[/]"
 
-# Coffee fill base colors (top to bottom = light to dark)
+# 5-layer coffee gradient: crema -> light -> medium -> dark -> deepest
 _FILL_COLORS = [
-    ("#B8520A", "#C45E12", "#A84808"),  # row 1: warm orange-brown variants
-    ("#8B4513", "#955020", "#7D3B0E"),  # row 2: medium brown variants
-    ("#5C2E0E", "#6B3610", "#4E260C"),  # row 3: dark brown variants
+    ("#D4A574", "#DCBC8A", "#C8955E"),  # crema: tan/cream
+    ("#B8520A", "#C45E12", "#A84808"),  # light coffee
+    ("#8B4513", "#955020", "#7D3B0E"),  # medium coffee
+    ("#5C2E0E", "#6B3610", "#4E260C"),  # dark coffee
+    ("#3A1A06", "#452008", "#2E1404"),  # deepest coffee
 ]
-_FILL_CHARS = ["\u2591", "\u2592", "\u2593"]  # light, medium, dark block
+_FILL_CHARS = ["\u2591", "\u2592", "\u2593", "\u2588"]  # ░▒▓█
 
 
-def _animated_fill_row(frame: int, row_idx: int) -> str:
+def _animated_fill_row(frame: int, row_idx: int, width: int = 13) -> str:
     """Generate an animated coffee fill row with per-character bubbling.
 
     Characters flicker between block densities and color variants,
-    creating a subtle simmering effect.
+    creating a subtle simmering PC-98 dithering effect.
     """
     colors = _FILL_COLORS[row_idx]
-    base_char = _FILL_CHARS[1 + (row_idx > 0)]  # ▒ for top, ▓ for mid/bottom
+    # Progressive density: crema=░, light=▒, medium=▓, dark=▓, deepest=█
+    base_ci = min(row_idx, len(_FILL_CHARS) - 1)
+    base_char = _FILL_CHARS[base_ci]
     result = ""
     seed = frame * 13 + row_idx * 7
-    for x in range(11):
-        # Deterministic per-character variation
+    for x in range(width):
         h = (seed + x * 37) % 100
-        if h < 12:  # 12% chance of lighter bubble
-            char = _FILL_CHARS[max(0, _FILL_CHARS.index(base_char) - 1)]
+        if h < 15:  # 15% lighter bubble
+            char = _FILL_CHARS[max(0, base_ci - 1)]
             color = colors[1]
-        elif h < 18:  # 6% chance of darker pocket
-            char = _FILL_CHARS[min(2, _FILL_CHARS.index(base_char) + 1)]
+        elif h < 22:  # 7% darker pocket
+            char = _FILL_CHARS[min(len(_FILL_CHARS) - 1, base_ci + 1)]
             color = colors[2]
         else:
             char = base_char
@@ -288,23 +299,54 @@ def _animated_fill_row(frame: int, row_idx: int) -> str:
         result += f"[{color}]{char}[/]"
     return result
 
-# Pre-cached paused cup (never changes)
+
+def _half_block_transition(frame: int, upper_idx: int, lower_idx: int,
+                           width: int = 13) -> str:
+    """Generate a half-block transition row between two coffee layers.
+
+    Uses ▄ with upper layer as background and lower layer as foreground
+    to create smooth PC-98 style dithering between gradient steps.
+    """
+    result = ""
+    seed = frame * 11 + upper_idx * 5
+    upper_colors = _FILL_COLORS[upper_idx]
+    lower_colors = _FILL_COLORS[lower_idx]
+    for x in range(width):
+        h = (seed + x * 23) % 100
+        # Slight color variation per-character
+        if h < 20:
+            uc = upper_colors[1]
+            lc = lower_colors[1]
+        else:
+            uc = upper_colors[0]
+            lc = lower_colors[0]
+        result += f"[{lc} on {uc}]\u2584[/]"
+    return result
+
+
+# Pre-cached paused cup (never changes) - 12 rows to match active
 _CUP_PAUSED: str = "\n".join([
-    _CUP_TOP,
-    f"     [white]\u2502[/] {_CUP_DIM} [white]\u251c\u2500\u2500\u256e[/]",
-    f"     [white]\u2502[/] {_CUP_DIM} [white]\u2502[/]  [white]\u2502[/]",
-    f"     [white]\u2502[/] {_CUP_DIM} [white]\u2502[/]  [white]\u2502[/]",
-    f"     [white]\u2502[/] {_CUP_DIM} [white]\u251c\u2500\u2500\u256f[/]",
+    _CUP_RIM,
+    f"     [#CCCCCC]\u2551[/] {_CUP_DIM} [#CCCCCC]\u2560\u2550\u2550\u2564[/]",
+    f"     [#CCCCCC]\u2551[/] {_CUP_DIM} [#CCCCCC]\u2551[/]  [#CCCCCC]\u2551[/]",
+    f"     [#CCCCCC]\u2551[/] {_CUP_DIM} [#CCCCCC]\u2551[/]  [#CCCCCC]\u2551[/]",
+    f"     [#CCCCCC]\u2551[/] {_CUP_DIM} [#CCCCCC]\u2551[/]  [#CCCCCC]\u2551[/]",
+    f"     [#CCCCCC]\u2551[/] {_CUP_DIM} [#CCCCCC]\u2551[/]  [#CCCCCC]\u2551[/]",
+    f"     [#CCCCCC]\u2551[/] {_CUP_DIM} [#CCCCCC]\u255f\u2500\u2500\u2568[/]",
+    f"     [#CCCCCC]\u2551[/] {_CUP_DIM} [#CCCCCC]\u2551[/]",
     _CUP_BOT,
-    _CUP_SAUCER,
+    "    [#555555]\u2554" + "\u2550" * 17 + "\u2557[/]  ",
+    "    [#444444]\u255a" + "\u2550" * 17 + "\u255d[/]  ",
+    "      [#2a2a2a]" + "\u2584" * 15 + "[/]    ",
 ])
 
 
 def get_cup_art(frame: int, *, paused: bool) -> str:
     """Return the coffee cup ASCII art for the current frame.
 
-    Active cups show animated bubbling coffee with a glowing surface,
-    shimmer highlights, breathing handle, and border-tinted saucer.
+    PC-98 style: double-line box drawing, 5-layer coffee gradient with
+    half-block dithering transitions, animated crema foam, bubbling fill,
+    breathing handle, 3D saucer with shadow.
     """
     if paused:
         return _CUP_PAUSED
@@ -312,36 +354,47 @@ def get_cup_art(frame: int, *, paused: bool) -> str:
     surface = _surface_with_shimmer(frame)
 
     # Handle breathing: cycle between white and dim white in sync with border
-    handle_phase = (frame // 2) % 72  # same cycle as border
+    handle_phase = (frame // 2) % 72
     ht = (math.sin(handle_phase / 72 * 2 * math.pi) + 1) / 2
-    hv = int(170 + ht * 85)  # #AAAAAA to #FFFFFF
+    hv = int(170 + ht * 85)
     hcolor = f"#{hv:02x}{hv:02x}{hv:02x}"
 
-    # Animated coffee fill rows (bubbling)
-    fill_1 = _animated_fill_row(frame, 0)
-    fill_2 = _animated_fill_row(frame, 1)
-    fill_3 = _animated_fill_row(frame, 2)
+    # Animated layers
+    crema = _animated_fill_row(frame, 0)
+    trans_01 = _half_block_transition(frame, 0, 1)
+    fill_light = _animated_fill_row(frame, 1)
+    fill_med = _animated_fill_row(frame, 2)
+    trans_34 = _half_block_transition(frame, 3, 4)
+    fill_deep = _animated_fill_row(frame, 4)
 
-    # Saucer reflects a hint of the border color
+    # Saucer reflects border color (30% blend)
     border_hex = BORDER_COLORS[(frame // 2) % len(BORDER_COLORS)]
-    # Blend border color toward gray (30% border, 70% base gray)
     br = int(border_hex[1:3], 16)
-    bg = int(border_hex[3:5], 16)
+    bg_ = int(border_hex[3:5], 16)
     bb = int(border_hex[5:7], 16)
     sr = int(0x55 * 0.7 + br * 0.3)
-    sg = int(0x55 * 0.7 + bg * 0.3)
+    sg = int(0x55 * 0.7 + bg_ * 0.3)
     sb = int(0x55 * 0.7 + bb * 0.3)
-    saucer_color = f"#{sr:02x}{sg:02x}{sb:02x}"
-    saucer = f"    [{saucer_color}]" + "\u2550" * 19 + "[/]  "
+    sc = f"#{sr:02x}{sg:02x}{sb:02x}"
+    # Shadow is darker blend
+    shr = int(0x2a * 0.8 + br * 0.2)
+    shg = int(0x2a * 0.8 + bg_ * 0.2)
+    shb = int(0x2a * 0.8 + bb * 0.2)
+    shc = f"#{shr:02x}{shg:02x}{shb:02x}"
 
     lines = [
-        _CUP_TOP,
-        f"     [white]\u2502[/] {surface} [{hcolor}]\u251c\u2500\u2500\u256e[/]",
-        f"     [white]\u2502[/] {fill_1} [{hcolor}]\u2502[/]  [{hcolor}]\u2502[/]",
-        f"     [white]\u2502[/] {fill_2} [{hcolor}]\u2502[/]  [{hcolor}]\u2502[/]",
-        f"     [white]\u2502[/] {fill_3} [{hcolor}]\u251c\u2500\u2500\u256f[/]",
+        _CUP_RIM,
+        f"     [#CCCCCC]\u2551[/] {surface}  [{hcolor}]\u2560\u2550\u2550\u2564[/]",
+        f"     [#CCCCCC]\u2551[/] {crema} [{hcolor}]\u2551[/]  [{hcolor}]\u2551[/]",
+        f"     [#CCCCCC]\u2551[/] {trans_01} [{hcolor}]\u2551[/]  [{hcolor}]\u2551[/]",
+        f"     [#CCCCCC]\u2551[/] {fill_light} [{hcolor}]\u2551[/]  [{hcolor}]\u2551[/]",
+        f"     [#CCCCCC]\u2551[/] {fill_med} [{hcolor}]\u2551[/]  [{hcolor}]\u2551[/]",
+        f"     [#CCCCCC]\u2551[/] {trans_34} [{hcolor}]\u255f\u2500\u2500\u2568[/]",
+        f"     [#CCCCCC]\u2551[/] {fill_deep} [{hcolor}]\u2551[/]",
         _CUP_BOT,
-        saucer,
+        f"    [{sc}]\u2554" + "\u2550" * 17 + "\u2557[/]  ",
+        f"    [{sc}]\u255a" + "\u2550" * 17 + "\u255d[/]  ",
+        f"      [{shc}]" + "\u2584" * 15 + "[/]    ",
     ]
     return "\n".join(lines)
 
@@ -672,9 +725,13 @@ def build_animated_display(
     border_color = get_border_color(frame, paused=paused)
     quip = get_quip(frame, paused=paused)
 
-    status_str = (
-        "[yellow]Paused[/yellow]" if paused else "[green]Active[/green]"
-    )
+    if paused:
+        status_str = "[yellow]Paused[/yellow]"
+    else:
+        # Pulsing green "Active" text
+        gt = (math.sin(frame / FPS * 2 * math.pi) + 1) / 2
+        gv = int(0x66 + gt * 0x99)  # pulse between dim and bright green
+        status_str = f"[#00{gv:02x}00]Active[/]"
 
     if duration_seconds is not None:
         remaining = max(0, duration_seconds - uptime_seconds)
@@ -712,10 +769,14 @@ def build_animated_display(
 
     art_lines = steam_lines + cup_lines + drip_lines
 
+    # Uptime color pulses with each second
+    ut_color = border_color if (frame % FPS) < 2 else "#AAAAAA"
+    uptime_str = f"[{ut_color}]{format_time(uptime_seconds)}[/]"
+
     status_fields = [
         f"Status:         {status_str}",
         f"Mode:           {MODE_DISPLAY.get(mode, str(mode))}",
-        f"Uptime:         {format_time(uptime_seconds)}",
+        f"Uptime:         {uptime_str}",
         f"Time remaining: {remaining_str}",
         f"Interval:       {interval}s",
         f"Simulate:       {sim_str}",

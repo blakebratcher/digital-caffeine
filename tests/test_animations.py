@@ -61,9 +61,9 @@ def test_get_cup_art_paused_has_dim_fill() -> None:
     assert "\u2591" in result
 
 
-def test_get_cup_art_active_has_seven_lines() -> None:
+def test_get_cup_art_active_has_twelve_lines() -> None:
     result = get_cup_art(frame=0, paused=False)
-    assert len(result.split("\n")) == 7
+    assert len(result.split("\n")) == 12
 
 
 def test_get_cup_art_surface_animates() -> None:
@@ -75,9 +75,21 @@ def test_get_cup_art_surface_animates() -> None:
 def test_get_cup_art_surface_glow_shifts() -> None:
     """Surface color oscillates over time, so distant frames differ."""
     art_0 = get_cup_art(frame=0, paused=False)
-    # ~2 seconds later at 24 FPS = 48 frames, should be at a different glow phase
     art_48 = get_cup_art(frame=48, paused=False)
     assert art_0 != art_48
+
+
+def test_get_cup_art_has_half_block_transitions() -> None:
+    """PC-98 style half-block dithering between coffee layers."""
+    result = get_cup_art(frame=0, paused=False)
+    assert "\u2584" in result  # lower half block used in transitions
+
+
+def test_get_cup_art_has_double_line_box() -> None:
+    """Cup uses double-line box drawing characters."""
+    result = get_cup_art(frame=0, paused=False)
+    assert "\u2550" in result  # ═
+    assert "\u2551" in result  # ║
 
 
 # -- Border color tests --
