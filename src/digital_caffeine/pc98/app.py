@@ -48,7 +48,7 @@ class StatusWidget(Static):
 
     DEFAULT_CSS = """
     StatusWidget {
-        width: 34;
+        width: 30;
         height: 100%;
         padding: 0 0;
     }
@@ -106,7 +106,7 @@ class PC98App(App):
         height: 100%;
     }}
     #status-area {{
-        width: 34;
+        width: 30;
         height: 100%;
         border-left: solid {PALETTE[STEEL_BLUE]};
     }}

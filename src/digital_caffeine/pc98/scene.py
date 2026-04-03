@@ -20,12 +20,16 @@ from digital_caffeine.pc98.sprites import (
     draw_handle,
     draw_ornate_pillars,
     draw_saucer,
+    draw_shelf,
     draw_table,
     draw_window,
 )
 
-_SURFACE_Y_TOP = _CUP_TOP + 2
-_SURFACE_Y_BOT = _CUP_TOP + 5
+_SURFACE_Y_TOP = _CUP_TOP + 5  # below the rim
+_SURFACE_Y_BOT = _CUP_TOP + 8  # 3 rows of animated surface
+
+# Colors that steam can draw over (background + window pane)
+_STEAM_BG_COLORS = frozenset({0, 1, 11, 12})  # BLACK, DEEP_NAVY, STEEL_BLUE, SLATE
 
 
 class CoffeeScene:
@@ -36,12 +40,12 @@ class CoffeeScene:
         self.cycle = CyclePalette()
         self.frame = 0
         self._steam = SteamSystem(
-            count=12,
+            count=14,
             spawn_y=float(_CUP_TOP - 1),
             x_center=(_INT_LEFT + _INT_RIGHT) // 2,
         )
         self._drips = DripSystem(
-            spawn_y=_CUP_BOTTOM + 5,
+            spawn_y=_CUP_BOTTOM + 6,
             x_min=_INT_LEFT,
             x_max=_INT_RIGHT,
         )
@@ -50,11 +54,12 @@ class CoffeeScene:
     def _draw_static(self) -> None:
         draw_background(self.canvas.image)
         draw_window(self.canvas.image)
+        draw_shelf(self.canvas.image)
         draw_table(self.canvas.image)
         draw_cup(self.canvas.image)
         draw_handle(self.canvas.image)
         draw_saucer(self.canvas.image)
-        draw_ornate_pillars(self.canvas.image)  # pillars drawn last (on top)
+        draw_ornate_pillars(self.canvas.image)
         self._static = self.canvas.image.copy()
 
     def update(self) -> None:
@@ -75,26 +80,26 @@ class CoffeeScene:
                 px[x, y] = surface_colors[phase]
 
         # Traveling shimmer highlights
-        for i in range(4):
+        for i in range(5):
             sx = _INT_LEFT + (
-                (shimmer_seed + i * 7 + self.frame // 2) % (_INT_RIGHT - _INT_LEFT)
+                (shimmer_seed + i * 7 + self.frame // 2)
+                % max(1, _INT_RIGHT - _INT_LEFT)
             )
-            sy = _SURFACE_Y_TOP + (i % (_SURFACE_Y_BOT - _SURFACE_Y_TOP))
+            sy = _SURFACE_Y_TOP + (i % max(1, _SURFACE_Y_BOT - _SURFACE_Y_TOP))
             if _INT_LEFT <= sx <= _INT_RIGHT:
                 px[sx, sy] = OFF_WHITE
 
-        # Draw steam (only on background/window pixels, not on pillars or cup)
-        bg_colors = {0, 1, 12}  # BLACK, DEEP_NAVY, SLATE
-        pillar_right = _PILLAR_W
-        pillar_left = SCENE_W - _PILLAR_W
+        # Draw steam - in front of window and background, not on pillars/cup/table
+        pillar_r = _PILLAR_W
+        pillar_l = SCENE_W - _PILLAR_W
         for x, y, ci in self._steam.get_draw_list():
-            if pillar_right <= x < pillar_left and 0 <= y < SCENE_H:
-                if px[x, y] in bg_colors:
+            if pillar_r <= x < pillar_l and 0 <= y < SCENE_H:
+                if px[x, y] in _STEAM_BG_COLORS:
                     px[x, y] = ci
 
         # Draw drips
         for x, y, ci in self._drips.get_draw_list():
-            if _PILLAR_W <= x < SCENE_W - _PILLAR_W and 0 <= y < SCENE_H:
+            if pillar_r <= x < pillar_l and 0 <= y < SCENE_H:
                 px[x, y] = ci
 
     def render(self) -> Text:

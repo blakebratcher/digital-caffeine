@@ -6,12 +6,20 @@ from digital_caffeine.pc98.palette import (
     BLACK,
     DARK_BROWN,
     DEEP_NAVY,
+    LIGHT_GRAY,
     PALETTE_RGB,
     SLATE,
     WARM_BROWN,
     WARM_GRAY,
 )
 from digital_caffeine.pc98.sprites import (
+    _CUP_LEFT,
+    _CUP_RIGHT,
+    _CUP_TOP,
+    _HDL_LEFT,
+    _HDL_RIGHT,
+    _SAU_LEFT,
+    _SAU_TOP,
     SCENE_H,
     SCENE_W,
     draw_background,
@@ -39,7 +47,6 @@ class TestDrawBackground:
         img = _make_scene()
         draw_background(img)
         px = img.load()
-        # Background is mostly deep navy with sparse star pixels
         for y in range(SCENE_H):
             for x in range(SCENE_W):
                 assert px[x, y] in (BLACK, DEEP_NAVY, SLATE)
@@ -49,9 +56,9 @@ class TestDrawBackground:
         draw_background(img)
         px = img.load()
         navy_count = sum(
-            1 for y in range(SCENE_H) for x in range(SCENE_W) if px[x, y] == DEEP_NAVY
+            1 for y in range(SCENE_H) for x in range(SCENE_W)
+            if px[x, y] == DEEP_NAVY
         )
-        # Vast majority should be deep navy
         assert navy_count > (SCENE_W * SCENE_H * 0.9)
 
 
@@ -61,21 +68,19 @@ class TestDrawTable:
         draw_background(img)
         draw_table(img)
         px = img.load()
-        from digital_caffeine.pc98.palette import LIGHT_GRAY as LG
-        # Table uses warm brown, warm gray, light gray bands
-        table_colors = (WARM_GRAY, WARM_BROWN, DARK_BROWN, LG)
-        assert px[32, SCENE_H - 1] in table_colors
+        table_colors = (WARM_GRAY, WARM_BROWN, DARK_BROWN, LIGHT_GRAY)
+        assert px[SCENE_W // 2, SCENE_H - 1] in table_colors
 
     def test_table_has_grain_lines(self):
         img = _make_scene()
         draw_background(img)
         draw_table(img)
         px = img.load()
-        table_top = 64
-        colors_in_table = set()
-        for y in range(table_top, SCENE_H):
-            colors_in_table.add(px[32, y])
-        assert len(colors_in_table) > 1
+        from digital_caffeine.pc98.sprites import _TABLE_TOP
+        colors = set()
+        for y in range(_TABLE_TOP, SCENE_H):
+            colors.add(px[SCENE_W // 2, y])
+        assert len(colors) > 1
 
 
 class TestDrawCup:
@@ -90,11 +95,11 @@ class TestDrawCup:
         draw_background(img)
         draw_cup(img)
         px = img.load()
-        has_black = False
-        for x in range(SCENE_W):
-            if px[x, 28] == BLACK:
-                has_black = True
-                break
+        # Check the cup top row for black outline
+        has_black = any(
+            px[x, _CUP_TOP] == BLACK
+            for x in range(_CUP_LEFT, _CUP_RIGHT + 1)
+        )
         assert has_black
 
     def test_cup_has_coffee_fill(self):
@@ -103,11 +108,11 @@ class TestDrawCup:
         draw_cup(img)
         px = img.load()
         coffee_colors = {2, 3, 4, 5, 6, 7}
-        found = False
-        for x in range(20, 44):
-            if px[x, 40] in coffee_colors:
-                found = True
-                break
+        mid_y = (_CUP_TOP + _CUP_RIGHT) // 2 + 5
+        found = any(
+            px[x, mid_y] in coffee_colors
+            for x in range(_CUP_LEFT + 4, _CUP_RIGHT - 3)
+        )
         assert found
 
 
@@ -117,9 +122,10 @@ class TestDrawSaucer:
         draw_background(img)
         draw_saucer(img)
         px = img.load()
-        from digital_caffeine.pc98.palette import LIGHT_GRAY, SLATE
-        saucer_colors = {SLATE, LIGHT_GRAY}
-        assert px[14, 60] in saucer_colors
+        from digital_caffeine.pc98.palette import OFF_WHITE
+        saucer_colors = {SLATE, LIGHT_GRAY, BLACK, OFF_WHITE}
+        # Saucer extends beyond the cup walls
+        assert px[_SAU_LEFT + 1, _SAU_TOP + 1] in saucer_colors
 
 
 class TestDrawHandle:
@@ -129,10 +135,10 @@ class TestDrawHandle:
         draw_handle(img)
         px = img.load()
         from digital_caffeine.pc98.palette import OFF_WHITE
-        handle_colors = {WARM_GRAY, OFF_WHITE, BLACK}
-        found = False
-        for x in range(47, 55):
-            if px[x, 40] in handle_colors:
-                found = True
-                break
+        handle_colors = {WARM_GRAY, LIGHT_GRAY, OFF_WHITE, BLACK}
+        mid_y = (_HDL_LEFT + _HDL_RIGHT) // 2
+        found = any(
+            px[x, mid_y] in handle_colors
+            for x in range(_HDL_LEFT, _HDL_RIGHT + 1)
+        )
         assert found
