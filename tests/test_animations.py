@@ -14,6 +14,7 @@ from digital_caffeine.animations import (
     _mode_phrase,
     _pick_quip,
     format_elapsed,
+    run_display,
 )
 from digital_caffeine.constants import Mode
 
@@ -208,3 +209,45 @@ def test_build_status_text_paused_uses_paused_phrase() -> None:
         use_color=True,
     )
     assert "paused" in _render(text)
+
+
+class _FakeEngine:
+    """Minimal stand-in for CaffeineEngine in tests."""
+
+    def __init__(self, *, paused: bool = False, stop_after: float | None = None) -> None:
+        self._paused = paused
+        self._active = True
+        self._stop_after = stop_after
+
+    @property
+    def is_paused(self) -> bool:
+        return self._paused
+
+    @property
+    def is_active(self) -> bool:
+        return self._active
+
+    def stop_now(self) -> None:
+        self._active = False
+
+
+def test_run_display_non_tty_prints_one_line_and_waits(monkeypatch) -> None:
+    monkeypatch.setattr("sys.stdout.isatty", lambda: False)
+
+    buf = StringIO()
+    console = Console(file=buf, force_terminal=False, width=100)
+
+    engine = _FakeEngine()
+
+    # Stop the engine after a short delay on a background thread.
+    import threading
+    threading.Timer(0.1, engine.stop_now).start()
+
+    run_display(engine=engine, mode=Mode.DISPLAY_ONLY, duration_seconds=None,
+                console=console)
+
+    output = buf.getvalue()
+    assert "caffeine: keeping display awake" in output
+    assert "Ctrl+C" in output
+    # One-line fallback, not a multiline live block
+    assert output.count("\n") <= 2

@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import os
 import random
+import sys
+import time
 
+from rich.console import Console
 from rich.text import Text
 
 from digital_caffeine.constants import Mode
@@ -249,3 +252,32 @@ def _pick_quip(elapsed_seconds: int, seed: int | None = None) -> str:
         shuffled
     )
     return shuffled[idx]
+
+
+def run_display(
+    engine,
+    mode: Mode,
+    duration_seconds: int | None,
+    *,
+    console: Console | None = None,
+) -> None:
+    """Blocking display loop. Returns when the engine stops or user quits.
+
+    - TTY: Rich Live redraw at FPS, reflows to terminal width.
+    - Non-TTY (piped/redirected): prints one status line, then sleeps until
+      the engine stops or Ctrl+C.
+    """
+    console = console or Console()
+
+    if not sys.stdout.isatty():
+        phrase = _MODE_PHRASES[mode]
+        console.print(f"caffeine: {phrase} (press Ctrl+C to stop)")
+        try:
+            while engine.is_active:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            pass
+        return
+
+    # TTY path implemented in Task 7.
+    raise NotImplementedError("TTY path not yet implemented")
