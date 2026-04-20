@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from digital_caffeine.animations import format_elapsed
+from digital_caffeine.animations import _format_duration, format_elapsed
 
 
 @pytest.mark.parametrize(
@@ -27,3 +27,19 @@ def test_format_elapsed_boundary_cases(seconds: int, expected: str) -> None:
 
 def test_format_elapsed_negative_clamps_to_zero() -> None:
     assert format_elapsed(-10) == "0s"
+
+
+@pytest.mark.parametrize(
+    "seconds, expected",
+    [
+        (0, "0m"),
+        (60, "1m"),
+        (1800, "30m"),
+        (3600, "1h 0m"),
+        (5400, "1h 30m"),
+        (7200, "2h 0m"),
+        (9000, "2h 30m"),
+    ],
+)
+def test_format_duration_omits_seconds(seconds: int, expected: str) -> None:
+    assert _format_duration(seconds) == expected

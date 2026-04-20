@@ -21,3 +21,14 @@ def format_elapsed(seconds: int) -> str:
     if minutes > 0:
         return f"{minutes}m {secs}s"
     return f"{secs}s"
+
+
+def _format_duration(seconds: int) -> str:
+    """Format seconds as 'Xh Ym' (no seconds). Clamps negatives to zero."""
+    if seconds < 0:
+        seconds = 0
+    hours, rem = divmod(seconds, 3600)
+    minutes = rem // 60
+    if hours > 0:
+        return f"{hours}h {minutes}m"
+    return f"{minutes}m"
