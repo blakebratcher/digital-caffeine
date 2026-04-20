@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from io import StringIO
+
 import pytest
+from rich.console import Console
 
 from digital_caffeine.animations import (
     QUIPS,
+    _build_status_text,
     _format_duration,
     _mode_phrase,
     _pick_quip,
@@ -100,3 +104,107 @@ def test_pick_quip_same_within_rotation_window() -> None:
     a = _pick_quip(elapsed_seconds=5, seed=42)
     b = _pick_quip(elapsed_seconds=5 + 89, seed=42)
     assert a == b
+
+
+def _render(text, width: int = 100) -> str:
+    buf = StringIO()
+    console = Console(file=buf, force_terminal=True, width=width, no_color=False)
+    console.print(text)
+    return buf.getvalue()
+
+
+def test_build_status_text_includes_mode_phrase_and_elapsed() -> None:
+    text = _build_status_text(
+        spinner_frame="\u280b",
+        mode=Mode.DISPLAY_ONLY,
+        elapsed_seconds=65,
+        duration_seconds=None,
+        paused=False,
+        width=100,
+        show_quit_hint=True,
+        use_color=True,
+    )
+    rendered = _render(text)
+    assert "caffeine" in rendered
+    assert "keeping display awake" in rendered
+    assert "1m 5s" in rendered
+
+
+def test_build_status_text_duration_suffix_when_duration_set() -> None:
+    text = _build_status_text(
+        spinner_frame="\u280b",
+        mode=Mode.DISPLAY_AND_SYSTEM,
+        elapsed_seconds=60 * 38,
+        duration_seconds=60 * 120,
+        paused=False,
+        width=100,
+        show_quit_hint=True,
+        use_color=True,
+    )
+    rendered = _render(text)
+    assert "1h 22m / 2h 0m left" in rendered
+
+
+def test_build_status_text_quit_hint_when_requested() -> None:
+    text = _build_status_text(
+        spinner_frame="\u280b",
+        mode=Mode.DISPLAY_ONLY,
+        elapsed_seconds=30,
+        duration_seconds=None,
+        paused=False,
+        width=100,
+        show_quit_hint=True,
+        use_color=True,
+    )
+    assert "q to quit" in _render(text)
+
+
+def test_build_status_text_narrow_terminal_drops_suffixes() -> None:
+    text = _build_status_text(
+        spinner_frame="\u280b",
+        mode=Mode.DISPLAY_ONLY,
+        elapsed_seconds=30,
+        duration_seconds=3600,
+        paused=False,
+        width=40,
+        show_quit_hint=True,
+        use_color=True,
+    )
+    rendered = _render(text, width=40)
+    assert "q to quit" not in rendered
+    assert "left" not in rendered
+    # But mode phrase and elapsed are still there
+    assert "keeping display awake" in rendered
+    assert "30s" in rendered
+
+
+def test_build_status_text_no_color_omits_ansi_codes() -> None:
+    text = _build_status_text(
+        spinner_frame="\u280b",
+        mode=Mode.DISPLAY_ONLY,
+        elapsed_seconds=30,
+        duration_seconds=None,
+        paused=False,
+        width=100,
+        show_quit_hint=True,
+        use_color=False,
+    )
+    buf = StringIO()
+    # no_color=False on the console itself so it WOULD emit ANSI if the Text
+    # carried styles; we're asserting the Text has no styles to emit.
+    Console(file=buf, force_terminal=True, width=100, no_color=False).print(text)
+    assert "\x1b[" not in buf.getvalue()
+
+
+def test_build_status_text_paused_uses_paused_phrase() -> None:
+    text = _build_status_text(
+        spinner_frame="\u2022",  # static frame for paused state
+        mode=Mode.DISPLAY_AND_SYSTEM,
+        elapsed_seconds=30,
+        duration_seconds=None,
+        paused=True,
+        width=100,
+        show_quit_hint=True,
+        use_color=True,
+    )
+    assert "paused" in _render(text)

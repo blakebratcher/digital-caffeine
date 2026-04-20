@@ -10,12 +10,17 @@ from __future__ import annotations
 import os
 import random
 
+from rich.text import Text
+
 from digital_caffeine.constants import Mode
 
 FPS = 2
 
 _QUIP_ROTATION_SECONDS = 90
 _STARTUP_QUIET_SECONDS = 5
+_NARROW_TERMINAL_COLS = 50
+_ACCENT_STYLE = "cyan"
+_DIM_STYLE = "dim"
 
 _MODE_PHRASES: dict[Mode, str] = {
     Mode.DISPLAY_ONLY: "keeping display awake",
@@ -184,6 +189,49 @@ def _mode_phrase(mode: Mode, paused: bool) -> str:
     if paused:
         return _PAUSED_PHRASE
     return _MODE_PHRASES[mode]
+
+
+def _build_status_text(
+    *,
+    spinner_frame: str,
+    mode: Mode,
+    elapsed_seconds: int,
+    duration_seconds: int | None,
+    paused: bool,
+    width: int,
+    show_quit_hint: bool,
+    use_color: bool,
+) -> Text:
+    """Build the single-line status Text for a given snapshot of state.
+
+    When `width` is below the narrow threshold, drops the quit hint and the
+    duration-remaining suffix. When `use_color` is False, no styles are applied
+    (NO_COLOR env).
+    """
+    narrow = width < _NARROW_TERMINAL_COLS
+    phrase = _mode_phrase(mode, paused)
+    elapsed_str = format_elapsed(elapsed_seconds)
+
+    accent = _ACCENT_STYLE if use_color else None
+    dim = _DIM_STYLE if use_color else None
+
+    text = Text()
+    text.append(f"{spinner_frame}  ")
+    text.append("caffeine", style=accent)
+    text.append(f" \u00b7 {phrase} \u00b7 {elapsed_str}")
+
+    if duration_seconds is not None and not narrow:
+        remaining = max(0, duration_seconds - elapsed_seconds)
+        suffix = (
+            f" \u00b7 {_format_duration(remaining)} / "
+            f"{_format_duration(duration_seconds)} left"
+        )
+        text.append(suffix, style=dim)
+
+    if show_quit_hint and not narrow:
+        text.append(" \u00b7 q to quit", style=dim)
+
+    return text
 
 
 def _pick_quip(elapsed_seconds: int, seed: int | None = None) -> str:
