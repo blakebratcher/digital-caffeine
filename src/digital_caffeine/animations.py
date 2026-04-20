@@ -18,7 +18,7 @@ from rich.text import Text
 
 from digital_caffeine.constants import Mode
 
-FPS = 2
+FPS = 10
 
 _QUIP_ROTATION_SECONDS = 90
 _STARTUP_QUIET_SECONDS = 5
