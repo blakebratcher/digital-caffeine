@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from digital_caffeine.animations import _format_duration, _mode_phrase, format_elapsed
+from digital_caffeine.animations import (
+    QUIPS,
+    _format_duration,
+    _mode_phrase,
+    _pick_quip,
+    format_elapsed,
+)
 from digital_caffeine.constants import Mode
 
 
@@ -65,3 +71,32 @@ def test_mode_phrase_paused_overrides_mode() -> None:
     assert _mode_phrase(Mode.DISPLAY_AND_SYSTEM, paused=True) == "paused"
     assert _mode_phrase(Mode.DISPLAY_ONLY, paused=True) == "paused"
     assert _mode_phrase(Mode.SYSTEM_ONLY, paused=True) == "paused"
+
+
+def test_quips_pool_has_at_least_one_hundred() -> None:
+    assert len(QUIPS) >= 100
+
+
+def test_pick_quip_is_empty_during_startup_window() -> None:
+    for elapsed in range(5):
+        assert _pick_quip(elapsed_seconds=elapsed, seed=42) == ""
+
+
+def test_pick_quip_returns_a_pool_member_after_startup() -> None:
+    quip = _pick_quip(elapsed_seconds=5, seed=42)
+    assert quip in QUIPS
+
+
+def test_pick_quip_changes_after_rotation_interval() -> None:
+    # Rotation is 90 seconds. Two elapsed values that straddle the boundary
+    # should (with overwhelming probability) yield different quips. Using
+    # a fixed seed makes this deterministic.
+    a = _pick_quip(elapsed_seconds=5, seed=42)
+    b = _pick_quip(elapsed_seconds=5 + 90, seed=42)
+    assert a != b
+
+
+def test_pick_quip_same_within_rotation_window() -> None:
+    a = _pick_quip(elapsed_seconds=5, seed=42)
+    b = _pick_quip(elapsed_seconds=5 + 89, seed=42)
+    assert a == b
