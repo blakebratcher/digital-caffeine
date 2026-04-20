@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from digital_caffeine.animations import _format_duration, format_elapsed
+from digital_caffeine.animations import _format_duration, _mode_phrase, format_elapsed
+from digital_caffeine.constants import Mode
 
 
 @pytest.mark.parametrize(
@@ -43,3 +44,24 @@ def test_format_elapsed_negative_clamps_to_zero() -> None:
 )
 def test_format_duration_omits_seconds(seconds: int, expected: str) -> None:
     assert _format_duration(seconds) == expected
+
+
+def test_mode_phrase_display_only() -> None:
+    assert _mode_phrase(Mode.DISPLAY_ONLY, paused=False) == "keeping display awake"
+
+
+def test_mode_phrase_system_only() -> None:
+    assert _mode_phrase(Mode.SYSTEM_ONLY, paused=False) == "keeping system awake"
+
+
+def test_mode_phrase_display_and_system() -> None:
+    assert (
+        _mode_phrase(Mode.DISPLAY_AND_SYSTEM, paused=False)
+        == "keeping display + system awake"
+    )
+
+
+def test_mode_phrase_paused_overrides_mode() -> None:
+    assert _mode_phrase(Mode.DISPLAY_AND_SYSTEM, paused=True) == "paused"
+    assert _mode_phrase(Mode.DISPLAY_ONLY, paused=True) == "paused"
+    assert _mode_phrase(Mode.SYSTEM_ONLY, paused=True) == "paused"

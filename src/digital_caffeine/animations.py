@@ -7,7 +7,17 @@ Public surface:
 
 from __future__ import annotations
 
+from digital_caffeine.constants import Mode
+
 FPS = 2
+
+_MODE_PHRASES: dict[Mode, str] = {
+    Mode.DISPLAY_ONLY: "keeping display awake",
+    Mode.SYSTEM_ONLY: "keeping system awake",
+    Mode.DISPLAY_AND_SYSTEM: "keeping display + system awake",
+}
+
+_PAUSED_PHRASE = "paused"
 
 
 def format_elapsed(seconds: int) -> str:
@@ -32,3 +42,10 @@ def _format_duration(seconds: int) -> str:
     if hours > 0:
         return f"{hours}h {minutes}m"
     return f"{minutes}m"
+
+
+def _mode_phrase(mode: Mode, paused: bool) -> str:
+    """Return the descriptive phrase for the current engine state."""
+    if paused:
+        return _PAUSED_PHRASE
+    return _MODE_PHRASES[mode]
