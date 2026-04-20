@@ -13,6 +13,7 @@ import sys
 import time
 
 from rich.console import Console
+from rich.live import Live
 from rich.text import Text
 
 from digital_caffeine.constants import Mode
@@ -279,5 +280,82 @@ def run_display(
             pass
         return
 
-    # TTY path implemented in Task 7.
-    raise NotImplementedError("TTY path not yet implemented")
+    # TTY path
+    use_color = os.environ.get("NO_COLOR") is None
+    spinner_frames = ["\u280B", "\u2819", "\u2839", "\u2838", "\u283C", "\u2834",
+                      "\u2826", "\u2827", "\u2807", "\u280F"]
+    paused_frame = "\u2022"
+
+    start = time.monotonic()
+    spinner_idx = 0
+
+    # Drain any keystrokes the user made before run_display started (e.g.
+    # Enter after 'caffeine start'). Prevents stale 'q' from quitting instantly.
+    try:
+        import msvcrt
+        while msvcrt.kbhit():
+            msvcrt.getch()
+    except ImportError:
+        pass
+
+    try:
+        with Live(console=console, refresh_per_second=FPS, transient=False) as live:
+            while engine.is_active:
+                elapsed = int(time.monotonic() - start)
+                if duration_seconds is not None and elapsed >= duration_seconds:
+                    break
+
+                paused = engine.is_paused
+                frame = paused_frame if paused else spinner_frames[
+                    spinner_idx % len(spinner_frames)
+                ]
+                width = console.size.width
+
+                status = _build_status_text(
+                    spinner_frame=frame,
+                    mode=mode,
+                    elapsed_seconds=elapsed,
+                    duration_seconds=duration_seconds,
+                    paused=paused,
+                    width=width,
+                    show_quit_hint=True,
+                    use_color=use_color,
+                )
+
+                quip = _pick_quip(elapsed)
+                quip_text = Text()
+                if quip:
+                    quip_text.append(f"    {quip}",
+                                     style=_DIM_STYLE if use_color else None)
+
+                block = Text()
+                block.append_text(status)
+                # Reserve the quip line (even when empty) so layout height
+                # is stable and the first quip at t=5s doesn't bump the view.
+                block.append("\n\n")
+                block.append_text(quip_text)
+
+                live.update(block)
+
+                if _q_pressed():
+                    break
+
+                spinner_idx += 1
+                time.sleep(1 / FPS)
+    except KeyboardInterrupt:
+        pass
+
+
+def _q_pressed() -> bool:
+    """Return True if 'q' or 'Q' was pressed since the last check.
+
+    Uses msvcrt (Windows stdlib). On non-Windows platforms this returns False.
+    """
+    try:
+        import msvcrt
+    except ImportError:
+        return False
+    if msvcrt.kbhit():
+        ch = msvcrt.getch()
+        return ch in (b"q", b"Q")
+    return False
