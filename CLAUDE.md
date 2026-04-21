@@ -36,7 +36,7 @@ caffeine version                  # Print version
 - `src/digital_caffeine/__main__.py` - Enables `python -m digital_caffeine`
 - `src/digital_caffeine/engine.py` - Core keep-awake logic (CaffeineEngine), thread-safe with pause/resume
 - `src/digital_caffeine/cli.py` - Click CLI group with `start`, `config`, `version` subcommands
-- `src/digital_caffeine/animations.py` - Animated coffee cup display, procedural steam, quips, progress bar
+- `src/digital_caffeine/animations.py` - Minimal single-line status display via `run_display` (spinner + mode phrase + elapsed + optional duration suffix), rotating quip pool, TTY vs non-TTY split
 - `src/digital_caffeine/tray.py` - pystray system tray mode (TrayApp class)
 - `src/digital_caffeine/config.py` - TOML config at `~/.digital-caffeine/config.toml`
 - `src/digital_caffeine/icons.py` - Programmatic icon generation with Pillow (active/paused/stopped states)
@@ -61,5 +61,6 @@ Defaults: `mode = "all"`, `interval = 60`, `duration = None`, `simulate = false`
 - **Windows-only**: Engine uses `ctypes.windll.kernel32.SetThreadExecutionState`. Use `--simulate` on the CLI, but note the engine itself will still call the API. Tests mock it automatically.
 - **`--simulate` is NOT a dry run**: It enables a 1px mouse jiggle (right then left) via `SendInput` to fool presence detection in Teams/Slack/Zoom. The engine still calls `SetThreadExecutionState` either way.
 - **Python 3.10 needs `tomli`**: `config.py` falls back from `tomllib` (3.11+) to `tomli`. Not in `dependencies` - users on 3.10 must install it manually or config loading will fail.
-- **Animation at 8 FPS**: `animations.py` drives `Rich.Live` at 8 FPS. The `FPS` constant controls refresh rate.
+- **Animation at 10 FPS**: `animations.py` drives `rich.live.Live` at 10 FPS. The `FPS` constant controls refresh rate.
+- **TTY vs non-TTY in `run_display`**: On a TTY it runs a Rich `Live` redraw loop with `q`-to-quit (via `msvcrt`). When stdout is piped/redirected it prints one status line and sleeps until the engine stops, so log output stays clean.
 - **Duration expiry in tray mode**: Engine fires an `on_stop` callback on a separate daemon thread to avoid self-join deadlock.
