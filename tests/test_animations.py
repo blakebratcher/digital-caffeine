@@ -1,293 +1,253 @@
-"""Tests for the Digital Caffeine CLI animations module."""
+"""Tests for the minimal Digital Caffeine display."""
 
 from __future__ import annotations
 
 from io import StringIO
 
+import pytest
 from rich.console import Console
-from rich.panel import Panel
 
 from digital_caffeine.animations import (
-    BORDER_COLORS,
-    FPS,
-    PAUSED_QUIP,
     QUIPS,
-    STEAM_FRAMES,
-    build_animated_display,
-    get_border_color,
-    get_cup_art,
-    get_drip_particles,
-    get_quip,
-    get_steam_frame,
+    _build_status_text,
+    _format_duration,
+    _mode_phrase,
+    _pick_quip,
+    format_elapsed,
+    run_display,
 )
 from digital_caffeine.constants import Mode
 
-# -- Steam frame tests --
+
+@pytest.mark.parametrize(
+    "seconds, expected",
+    [
+        (0, "0s"),
+        (5, "5s"),
+        (59, "59s"),
+        (60, "1m 0s"),
+        (61, "1m 1s"),
+        (3599, "59m 59s"),
+        (3600, "1h 0m 0s"),
+        (3661, "1h 1m 1s"),
+        (7385, "2h 3m 5s"),
+    ],
+)
+def test_format_elapsed_boundary_cases(seconds: int, expected: str) -> None:
+    assert format_elapsed(seconds) == expected
 
 
-def test_steam_frames_are_generated() -> None:
-    assert len(STEAM_FRAMES) == 48
+def test_format_elapsed_negative_clamps_to_zero() -> None:
+    assert format_elapsed(-10) == "0s"
 
 
-def test_get_steam_frame_cycles() -> None:
-    first = get_steam_frame(frame=0, paused=False)
-    # Steam advances every 3 frames, so full cycle is len * 3 frames
-    wrapped = get_steam_frame(frame=len(STEAM_FRAMES) * 3, paused=False)
-    assert first == wrapped
+@pytest.mark.parametrize(
+    "seconds, expected",
+    [
+        (0, "0m"),
+        (60, "1m"),
+        (1800, "30m"),
+        (3600, "1h 0m"),
+        (5400, "1h 30m"),
+        (7200, "2h 0m"),
+        (9000, "2h 30m"),
+    ],
+)
+def test_format_duration_omits_seconds(seconds: int, expected: str) -> None:
+    assert _format_duration(seconds) == expected
 
 
-def test_get_steam_frame_has_seven_lines() -> None:
-    result = get_steam_frame(frame=0, paused=False)
-    assert len(result.split("\n")) == 7
+def test_mode_phrase_display_only() -> None:
+    assert _mode_phrase(Mode.DISPLAY_ONLY, paused=False) == "keeping display awake"
 
 
-def test_get_steam_frame_paused_returns_blank_lines() -> None:
-    result = get_steam_frame(frame=0, paused=True)
-    lines = result.split("\n")
-    assert len(lines) == 7
-    assert all(line.strip() == "" for line in lines)
+def test_mode_phrase_system_only() -> None:
+    assert _mode_phrase(Mode.SYSTEM_ONLY, paused=False) == "keeping system awake"
 
 
-# -- Cup art tests --
+def test_mode_phrase_display_and_system() -> None:
+    assert (
+        _mode_phrase(Mode.DISPLAY_AND_SYSTEM, paused=False)
+        == "keeping display + system awake"
+    )
 
 
-def test_get_cup_art_active_has_fill() -> None:
-    result = get_cup_art(frame=0, paused=False)
-    assert "\u2593" in result
+def test_mode_phrase_paused_overrides_mode() -> None:
+    assert _mode_phrase(Mode.DISPLAY_AND_SYSTEM, paused=True) == "paused"
+    assert _mode_phrase(Mode.DISPLAY_ONLY, paused=True) == "paused"
+    assert _mode_phrase(Mode.SYSTEM_ONLY, paused=True) == "paused"
 
 
-def test_get_cup_art_paused_has_dim_fill() -> None:
-    result = get_cup_art(frame=0, paused=True)
-    assert "\u2591" in result
-
-
-def test_get_cup_art_active_has_twelve_lines() -> None:
-    result = get_cup_art(frame=0, paused=False)
-    assert len(result.split("\n")) == 12
-
-
-def test_get_cup_art_surface_animates() -> None:
-    art_0 = get_cup_art(frame=0, paused=False)
-    art_2 = get_cup_art(frame=2, paused=False)
-    assert art_0 != art_2
-
-
-def test_get_cup_art_surface_glow_shifts() -> None:
-    """Surface color oscillates over time, so distant frames differ."""
-    art_0 = get_cup_art(frame=0, paused=False)
-    art_48 = get_cup_art(frame=48, paused=False)
-    assert art_0 != art_48
-
-
-def test_get_cup_art_has_half_block_transitions() -> None:
-    """PC-98 style half-block dithering between coffee layers."""
-    result = get_cup_art(frame=0, paused=False)
-    assert "\u2584" in result  # lower half block used in transitions
-
-
-def test_get_cup_art_has_double_line_box() -> None:
-    """Cup uses double-line box drawing characters."""
-    result = get_cup_art(frame=0, paused=False)
-    assert "\u2550" in result  # ═
-    assert "\u2551" in result  # ║
-
-
-# -- Border color tests --
-
-
-def test_border_colors_has_smooth_steps() -> None:
-    assert len(BORDER_COLORS) == 72
-    assert all(c.startswith("#") for c in BORDER_COLORS)
-
-
-def test_get_border_color_cycles() -> None:
-    # Border advances every 2 frames
-    colors = [get_border_color(frame=i * 2, paused=False) for i in range(72)]
-    assert colors == BORDER_COLORS
-    assert get_border_color(frame=144, paused=False) == BORDER_COLORS[0]
-
-
-def test_get_border_color_paused_returns_yellow() -> None:
-    assert get_border_color(frame=0, paused=True) == "yellow"
-    assert get_border_color(frame=99, paused=True) == "yellow"
-
-
-# -- Quip tests --
-
-
-def test_quips_has_many_entries() -> None:
+def test_quips_pool_has_at_least_one_hundred() -> None:
     assert len(QUIPS) >= 100
 
 
-def test_get_quip_rotates() -> None:
-    frames_per_quip = 12 * FPS  # 12 seconds per quip at 24 FPS
-    quip_a = get_quip(frame=frames_per_quip - 1, paused=False)
-    quip_b = get_quip(frame=2 * frames_per_quip - 1, paused=False)
-    assert quip_a != quip_b
+def test_pick_quip_is_empty_during_startup_window() -> None:
+    for elapsed in range(5):
+        assert _pick_quip(elapsed_seconds=elapsed, seed=42) == ""
 
 
-def test_get_quip_typewriter_effect() -> None:
-    partial = get_quip(frame=0, paused=False)
-    full = get_quip(frame=12 * FPS - 1, paused=False)
-    assert len(partial) < len(full)
-    assert full.startswith(partial[:1])
+def test_pick_quip_returns_a_pool_member_after_startup() -> None:
+    quip = _pick_quip(elapsed_seconds=5, seed=42)
+    assert quip in QUIPS
 
 
-def test_get_quip_wraps_around() -> None:
-    cycle_length = len(QUIPS) * 12 * FPS
-    end = 12 * FPS - 1
-    assert get_quip(frame=end, paused=False) == get_quip(
-        frame=cycle_length + end, paused=False
-    )
+def test_pick_quip_changes_after_rotation_interval() -> None:
+    # Rotation is 90 seconds. Two elapsed values that straddle the boundary
+    # should (with overwhelming probability) yield different quips. Using
+    # a fixed seed makes this deterministic.
+    a = _pick_quip(elapsed_seconds=5, seed=42)
+    b = _pick_quip(elapsed_seconds=5 + 90, seed=42)
+    assert a != b
 
 
-def test_get_quip_paused_returns_paused_quip() -> None:
-    assert get_quip(frame=0, paused=True) == PAUSED_QUIP
-    assert get_quip(frame=99, paused=True) == PAUSED_QUIP
-
-
-# -- Drip particle tests --
-
-
-def test_get_drip_particles_returns_list() -> None:
-    drips = get_drip_particles(frame=0)
-    assert isinstance(drips, list)
-
-
-def test_get_drip_particles_max_two() -> None:
-    # Check across many frames that we never exceed 2 active drips
-    for f in range(500):
-        drips = get_drip_particles(frame=f)
-        assert len(drips) <= 2
-
-
-def test_get_drip_particles_deterministic() -> None:
-    """Same frame number always produces the same drips."""
-    a = get_drip_particles(frame=100)
-    b = get_drip_particles(frame=100)
+def test_pick_quip_same_within_rotation_window() -> None:
+    a = _pick_quip(elapsed_seconds=5, seed=42)
+    b = _pick_quip(elapsed_seconds=5 + 89, seed=42)
     assert a == b
 
 
-# -- build_animated_display tests --
-
-
-def test_build_animated_display_returns_panel() -> None:
-    result = build_animated_display(
-        frame=0,
-        mode=Mode.DISPLAY_AND_SYSTEM,
-        uptime_seconds=0,
-        duration_seconds=None,
-        interval=60,
-        paused=False,
-        simulate=False,
-    )
-    assert isinstance(result, Panel)
-
-
-def test_build_animated_display_contains_status_info() -> None:
+def _render(text, width: int = 100) -> str:
     buf = StringIO()
-    console = Console(file=buf, force_terminal=True, width=90)
-    panel = build_animated_display(
-        frame=0,
+    console = Console(file=buf, force_terminal=True, width=width, no_color=False)
+    console.print(text)
+    return buf.getvalue()
+
+
+def test_build_status_text_includes_mode_phrase_and_elapsed() -> None:
+    text = _build_status_text(
+        spinner_frame="\u280b",
+        mode=Mode.DISPLAY_ONLY,
+        elapsed_seconds=65,
+        duration_seconds=None,
+        paused=False,
+        width=100,
+        show_quit_hint=True,
+        use_color=True,
+    )
+    rendered = _render(text)
+    assert "caffeine" in rendered
+    assert "keeping display awake" in rendered
+    assert "1m 5s" in rendered
+
+
+def test_build_status_text_duration_suffix_when_duration_set() -> None:
+    text = _build_status_text(
+        spinner_frame="\u280b",
         mode=Mode.DISPLAY_AND_SYSTEM,
-        uptime_seconds=65,
+        elapsed_seconds=60 * 38,
+        duration_seconds=60 * 120,
+        paused=False,
+        width=100,
+        show_quit_hint=True,
+        use_color=True,
+    )
+    rendered = _render(text)
+    assert "1h 22m / 2h 0m left" in rendered
+
+
+def test_build_status_text_quit_hint_when_requested() -> None:
+    text = _build_status_text(
+        spinner_frame="\u280b",
+        mode=Mode.DISPLAY_ONLY,
+        elapsed_seconds=30,
+        duration_seconds=None,
+        paused=False,
+        width=100,
+        show_quit_hint=True,
+        use_color=True,
+    )
+    assert "q to quit" in _render(text)
+
+
+def test_build_status_text_narrow_terminal_drops_suffixes() -> None:
+    text = _build_status_text(
+        spinner_frame="\u280b",
+        mode=Mode.DISPLAY_ONLY,
+        elapsed_seconds=30,
         duration_seconds=3600,
-        interval=60,
         paused=False,
-        simulate=True,
+        width=40,
+        show_quit_hint=True,
+        use_color=True,
     )
-    console.print(panel)
-    output = buf.getvalue()
-
-    assert "Active" in output
-    assert "Display + System" in output
-    assert "00:01:05" in output
-    assert "00:58:55" in output
-    assert "60s" in output
+    rendered = _render(text, width=40)
+    assert "q to quit" not in rendered
+    assert "left" not in rendered
+    # But mode phrase and elapsed are still there
+    assert "keeping display awake" in rendered
+    assert "30s" in rendered
 
 
-def test_build_animated_display_paused_state() -> None:
+def test_build_status_text_no_color_omits_ansi_codes() -> None:
+    text = _build_status_text(
+        spinner_frame="\u280b",
+        mode=Mode.DISPLAY_ONLY,
+        elapsed_seconds=30,
+        duration_seconds=None,
+        paused=False,
+        width=100,
+        show_quit_hint=True,
+        use_color=False,
+    )
     buf = StringIO()
-    console = Console(file=buf, force_terminal=True, width=90)
-    panel = build_animated_display(
-        frame=0,
+    # no_color=False on the console itself so it WOULD emit ANSI if the Text
+    # carried styles; we're asserting the Text has no styles to emit.
+    Console(file=buf, force_terminal=True, width=100, no_color=False).print(text)
+    assert "\x1b[" not in buf.getvalue()
+
+
+def test_build_status_text_paused_uses_paused_phrase() -> None:
+    text = _build_status_text(
+        spinner_frame="\u2022",  # static frame for paused state
         mode=Mode.DISPLAY_AND_SYSTEM,
-        uptime_seconds=10,
+        elapsed_seconds=30,
         duration_seconds=None,
-        interval=60,
         paused=True,
-        simulate=False,
+        width=100,
+        show_quit_hint=True,
+        use_color=True,
     )
-    console.print(panel)
+    assert "paused" in _render(text)
+
+
+class _FakeEngine:
+    """Minimal stand-in for CaffeineEngine in tests."""
+
+    def __init__(self, *, paused: bool = False, stop_after: float | None = None) -> None:
+        self._paused = paused
+        self._active = True
+        self._stop_after = stop_after
+
+    @property
+    def is_paused(self) -> bool:
+        return self._paused
+
+    @property
+    def is_active(self) -> bool:
+        return self._active
+
+    def stop_now(self) -> None:
+        self._active = False
+
+
+def test_run_display_non_tty_prints_one_line_and_waits(monkeypatch) -> None:
+    monkeypatch.setattr("sys.stdout.isatty", lambda: False)
+
+    buf = StringIO()
+    console = Console(file=buf, force_terminal=False, width=100)
+
+    engine = _FakeEngine()
+
+    # Stop the engine after a short delay on a background thread.
+    import threading
+    threading.Timer(0.1, engine.stop_now).start()
+
+    run_display(engine=engine, mode=Mode.DISPLAY_ONLY, duration_seconds=None,
+                console=console)
+
     output = buf.getvalue()
-
-    assert "Paused" in output
-    assert "Gone cold" in output
-
-
-def test_build_animated_display_border_color_changes() -> None:
-    # Border advances every 2 frames, so use frames 0 and 2 to get different colors
-    panel_0 = build_animated_display(
-        frame=0,
-        mode=Mode.DISPLAY_AND_SYSTEM,
-        uptime_seconds=0,
-        duration_seconds=None,
-        interval=60,
-        paused=False,
-        simulate=False,
-    )
-    panel_2 = build_animated_display(
-        frame=2,
-        mode=Mode.DISPLAY_AND_SYSTEM,
-        uptime_seconds=0,
-        duration_seconds=None,
-        interval=60,
-        paused=False,
-        simulate=False,
-    )
-    assert panel_0.border_style != panel_2.border_style
-
-
-def test_build_animated_display_quip_rotates() -> None:
-    buf_0 = StringIO()
-    console_0 = Console(file=buf_0, force_terminal=True, width=90)
-    panel_0 = build_animated_display(
-        frame=0,
-        mode=Mode.DISPLAY_AND_SYSTEM,
-        uptime_seconds=0,
-        duration_seconds=None,
-        interval=60,
-        paused=False,
-        simulate=False,
-    )
-    console_0.print(panel_0)
-
-    buf_8 = StringIO()
-    console_8 = Console(file=buf_8, force_terminal=True, width=90)
-    panel_8 = build_animated_display(
-        frame=12 * FPS,
-        mode=Mode.DISPLAY_AND_SYSTEM,
-        uptime_seconds=12,
-        duration_seconds=None,
-        interval=60,
-        paused=False,
-        simulate=False,
-    )
-    console_8.print(panel_8)
-
-    assert buf_0.getvalue() != buf_8.getvalue()
-
-
-def test_build_animated_display_renders_without_error_at_many_frames() -> None:
-    """Verify display assembly works at various frame counts without crashing."""
-    for f in [0, 1, 24, 48, 100, 288, 500]:
-        panel = build_animated_display(
-            frame=f,
-            mode=Mode.DISPLAY_AND_SYSTEM,
-            uptime_seconds=f // FPS,
-            duration_seconds=None,
-            interval=60,
-            paused=False,
-            simulate=False,
-        )
-        assert isinstance(panel, Panel)
+    assert "caffeine: keeping display awake" in output
+    assert "Ctrl+C" in output
+    # One-line fallback, not a multiline live block
+    assert output.count("\n") <= 2

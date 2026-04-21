@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-from io import StringIO
 from unittest.mock import patch
 
 import click
 import pytest
 from click.testing import CliRunner
-from rich.console import Console
-from rich.panel import Panel
 
-from digital_caffeine.cli import build_display, cli, format_time, parse_duration
-from digital_caffeine.constants import Mode
+from digital_caffeine.cli import cli, parse_duration
 
 # -- parse_duration tests --
 
@@ -50,21 +46,6 @@ def test_parse_duration_zero_raises() -> None:
         parse_duration("0s")
 
 
-# -- format_time tests --
-
-
-def test_format_time_zero() -> None:
-    assert format_time(0) == "00:00:00"
-
-
-def test_format_time_minutes_seconds() -> None:
-    assert format_time(61) == "00:01:01"
-
-
-def test_format_time_hours() -> None:
-    assert format_time(3661) == "01:01:01"
-
-
 # -- CLI command tests --
 
 
@@ -99,24 +80,3 @@ def test_start_help() -> None:
     result = runner.invoke(cli, ["start", "--help"])
     assert result.exit_code == 0
     assert "Start keeping your machine awake" in result.output
-
-
-def test_build_display_returns_animated_panel() -> None:
-    """build_display should delegate to the animated display builder."""
-    panel = build_display(
-        mode=Mode.DISPLAY_AND_SYSTEM,
-        uptime_seconds=0,
-        duration_seconds=None,
-        interval=60,
-        paused=False,
-        simulate=False,
-    )
-    assert isinstance(panel, Panel)
-
-    # Verify it has animated content by checking for coffee cup character
-    buf = StringIO()
-    console = Console(file=buf, force_terminal=True, width=80)
-    console.print(panel)
-    output = buf.getvalue()
-    # The cup should contain box-drawing characters from the animated display
-    assert "\u2502" in output  # vertical box line from cup art

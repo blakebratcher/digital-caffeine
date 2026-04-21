@@ -25,7 +25,7 @@ Digital Caffeine tells your PC to knock it off. It uses the Windows `SetThreadEx
 
 ## What you get
 
-The CLI mode gives you a live dashboard running at 8fps with procedurally generated steam wisps rising from a color-gradient coffee cup, a rippling liquid surface, a border that breathes through cyan shades, and coffee puns that type themselves out with a blinking cursor. Timed sessions get a progress bar. Is any of this necessary? No. Did we do it anyway? Obviously.
+The CLI mode gives you a single-line status: a braille spinner, what it's doing, how long it's been doing it, and a rotating coffee quip underneath. No dashboards, no ASCII art, no breathing borders. It reflows on narrow terminals, drops styling when `NO_COLOR` is set, and quits on `q` or Ctrl+C.
 
 There's also a system tray mode if you'd rather it just sit in the corner and do its job quietly. Coffee cup icon, right-click menu, notifications when a timed session ends.
 
@@ -76,29 +76,20 @@ caffeine start --simulate --duration 8h --mode all
 When you run `caffeine start`, you get this:
 
 ```
-  +-----------------------------------------------+
-  |            Digital Caffeine                    |
-  |                                                |
-  |     .  .                                       |
-  |     . .  ·                                     |
-  |    '    '·          Status:         Active     |
-  |    '   ~'           Mode:           Display    |
-  |      ) ~  )         Uptime:         00:05:23   |
-  |   +-----------+     Time remaining: 01:54:37   |
-  |   | ~.~.~.~.~ |--\  Interval:       60s        |
-  |   | ......... |  |  Simulate:       On         |
-  |   | ......... |  |                             |
-  |   | ......... |--/  ####............... 25%    |
-  |   +-----------+                                |
-  |  =================                            |
-  |                                                |
-  |  Brewing producti_                             |
-  |                                                |
-  |  Press Ctrl+C to stop                          |
-  +-----------------------------------------------+
+⠋  caffeine · keeping display + system awake · 1m 23s · q to quit
+
+    Brewing productivity...
 ```
 
-The steam is procedurally generated - 10 wisps rising with sine-wave drift, fading from `)` near the cup to `·` at the top. The coffee has a three-tone brown gradient. The liquid surface ripples. The quips type themselves out letter by letter with a blinking cursor. If you set a duration, a progress bar fills up next to the cup. The border breathes through cyan shades at 2Hz. All of it runs at 8fps and the entire animation state is a pure function of the frame counter. Nobody asked for this.
+For a timed session (`caffeine start --duration 1h`), the status line picks up a remaining/total suffix:
+
+```
+⠙  caffeine · keeping display + system awake · 1m 23s · 58m / 1h left · q to quit
+
+    Espresso yourself freely
+```
+
+The spinner is a 10-frame braille cycle ticking at 10 FPS. The quip is held back for the first 5 seconds so startup isn't noisy, then rotates every 90 seconds from a pool of ~120 puns seeded per-session so each run feels different. Narrow terminals (under 50 columns) drop the "left" suffix and quit hint. `NO_COLOR` disables the cyan accent and dim styling. Piped or redirected output skips the live redraw and prints one line.
 
 ### Options
 

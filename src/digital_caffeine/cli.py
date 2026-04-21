@@ -8,11 +8,9 @@ import time
 
 import click
 from rich.console import Console
-from rich.live import Live
-from rich.panel import Panel
 
 from digital_caffeine import __version__
-from digital_caffeine.animations import FPS, MODE_DISPLAY, build_animated_display, format_time
+from digital_caffeine.animations import format_elapsed, run_display
 from digital_caffeine.config import get_config_path, load_config
 from digital_caffeine.constants import Mode
 
@@ -65,77 +63,6 @@ def parse_duration(s: str) -> int:
 
     return total
 
-
-
-def build_display(
-    *,
-    frame: int = 0,
-    mode: Mode,
-    uptime_seconds: int,
-    duration_seconds: int | None,
-    interval: int,
-    paused: bool,
-    simulate: bool,
-) -> Panel:
-    """Build a Rich Panel showing the current keep-awake status with animations.
-
-    Delegates to the animations module for coffee-themed display.
-    """
-    return build_animated_display(
-        frame=frame,
-        mode=mode,
-        uptime_seconds=uptime_seconds,
-        duration_seconds=duration_seconds,
-        interval=interval,
-        paused=paused,
-        simulate=simulate,
-    )
-
-
-def _can_use_pc98() -> bool:
-    """Check if the terminal supports the PC-98 Textual display."""
-    try:
-        from digital_caffeine.pc98 import PC98App  # noqa: F401
-        return True
-    except ImportError:
-        return False
-
-
-def _run_rich_display(
-    *,
-    engine: object,
-    mode: Mode,
-    duration_seconds: int | None,
-    interval: int,
-    simulate: bool,
-    start_time: float,
-) -> None:
-    """Run the original Rich Live display as a fallback."""
-    console.print(
-        f"[green]Digital Caffeine started[/green] - mode={MODE_DISPLAY[mode]}, interval={interval}s"
-    )
-    frame = 0
-    with Live(
-        build_display(
-            frame=0, mode=mode, uptime_seconds=0,
-            duration_seconds=duration_seconds, interval=interval,
-            paused=False, simulate=simulate,
-        ),
-        console=console, refresh_per_second=FPS, transient=False,
-    ) as live:
-        while True:
-            elapsed = int(time.monotonic() - start_time)
-            if duration_seconds is not None and elapsed >= duration_seconds:
-                break
-            live.update(
-                build_display(
-                    frame=frame, mode=mode, uptime_seconds=elapsed,
-                    duration_seconds=duration_seconds, interval=interval,
-                    paused=False, simulate=simulate,
-                )
-            )
-            frame += 1
-            time.sleep(1 / FPS)
 
 
 @click.group()
@@ -239,47 +166,15 @@ def start(
     start_time = time.monotonic()
 
     try:
-        if _can_use_pc98():
-            try:
-                from digital_caffeine.pc98 import PC98App
-
-                app = PC98App(
-                    engine=engine,
-                    mode=mode,
-                    duration_seconds=duration_seconds,
-                    interval=interval,
-                    simulate=simulate,
-                )
-                app.run()
-            except Exception as exc:
-                # Textual failed - show error and fall back to Rich display
-                console.print(f"[yellow]PC-98 display failed: {exc}[/yellow]")
-                console.print("[dim]Falling back to classic display...[/dim]")
-                _run_rich_display(
-                    engine=engine, mode=mode,
-                    duration_seconds=duration_seconds,
-                    interval=interval, simulate=simulate,
-                    start_time=start_time,
-                )
-        else:
-            _run_rich_display(
-                engine=engine, mode=mode,
-                duration_seconds=duration_seconds,
-                interval=interval, simulate=simulate,
-                start_time=start_time,
-            )
+        run_display(engine=engine, mode=mode, duration_seconds=duration_seconds)
     except KeyboardInterrupt:
         pass
     finally:
         engine.stop()
         total_uptime = int(time.monotonic() - start_time)
-        console.print()
-        console.print("[bold cyan]Session Summary[/bold cyan]")
-        console.print(f"  Total uptime:  {format_time(total_uptime)}")
-        console.print(f"  Mode:          {MODE_DISPLAY[mode]}")
-        if simulate:
-            console.print("  Simulate:      On")
-        console.print("[green]Digital Caffeine stopped. Sweet dreams![/green]")
+        console.print(
+            f"caffeine stopped \u00b7 kept awake for {format_elapsed(total_uptime)}"
+        )
 
 
 @cli.command()
